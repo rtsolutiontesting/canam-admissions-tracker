@@ -224,19 +224,21 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Check if user is already logged in - prevent redirect loop
-        let redirecting = false;
+        // Check if user is already logged in - NO automatic redirect to prevent loops
         onAuthStateChanged(auth, (user) => {
-            // Prevent multiple simultaneous redirects
-            if (redirecting) return;
-            
             if (user) {
+                // User is logged in - but don't auto-redirect to prevent loops
+                // Redirect will happen after successful login form submission
                 const currentPath = window.location.pathname.toLowerCase();
-                // Only redirect if we're actually on login page
-                if (currentPath.includes('login') && !currentPath.includes('index')) {
-                    redirecting = true;
-                    // Use replace instead of href to prevent back button issues
-                    window.location.replace('/index.html');
+                // Only redirect if we haven't redirected yet and are on login page
+                if (currentPath.includes('login') 
+                    && !currentPath.includes('index') 
+                    && !sessionStorage.getItem('loginRedirectAttempted')) {
+                    sessionStorage.setItem('loginRedirectAttempted', 'true');
+                    // Small delay to prevent immediate redirect
+                    setTimeout(() => {
+                        window.location.replace('/index.html');
+                    }, 500);
                 }
             }
         });
@@ -256,15 +258,18 @@
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
+                // Clear redirect flags
+                sessionStorage.removeItem('redirectAttempted');
+                sessionStorage.removeItem('loginRedirectAttempted');
                 // Show success message before redirect
                 const successDiv = document.createElement('div');
                 successDiv.className = 'success';
                 successDiv.textContent = '✅ Login successful! Redirecting...';
                 messageDiv.appendChild(successDiv);
                 
-                // Redirect after short delay (better than immediate redirect)
+                // Redirect after short delay
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    window.location.replace('/index.html');
                 }, 1000);
             } catch (error) {
                 const errorDiv = document.createElement('div');

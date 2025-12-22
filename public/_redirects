@@ -1,10 +1,8 @@
 # Cloudflare Pages redirects
 /login /login.html 200
-/login.html /login.html 200
 /about /about.html 200
 /admin /admin.html 200
 /create-user /create-user.html 200
 /create-all-users /create-all-users.html 200
 /privacy-policy /privacy-policy.html 200
-/index.html /index.html 200
 

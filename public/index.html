@@ -490,23 +490,24 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Check authentication - prevent redirect loop
-        let redirecting = false;
+        // Check authentication - NO automatic redirect to prevent loops
         onAuthStateChanged(auth, (user) => {
-            // Prevent multiple simultaneous redirects
-            if (redirecting) return;
-            
-            if (!user) {
-                const currentPath = window.location.pathname.toLowerCase();
-                // Only redirect if we're actually on index.html or root
-                if ((currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('index.html')) 
-                    && !currentPath.includes('login')) {
-                    redirecting = true;
-                    // Use replace instead of href to prevent back button issues
-                    window.location.replace('/login.html');
-                }
-            } else {
+            if (user) {
+                // User is logged in - show dashboard
                 updateUserProfile(user);
+            } else {
+                // User not logged in - show message or redirect only once
+                const currentPath = window.location.pathname.toLowerCase();
+                // Only redirect if we're on index.html or root, and haven't redirected yet
+                if ((currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('index.html')) 
+                    && !currentPath.includes('login') 
+                    && !sessionStorage.getItem('redirectAttempted')) {
+                    sessionStorage.setItem('redirectAttempted', 'true');
+                    // Small delay to prevent immediate redirect
+                    setTimeout(() => {
+                        window.location.replace('/login.html');
+                    }, 500);
+                }
             }
         });
 
@@ -522,7 +523,10 @@
         window.logout = async function() {
             try {
                 await signOut(auth);
-                window.location.href = 'login.html';
+                // Clear redirect flags
+                sessionStorage.removeItem('redirectAttempted');
+                sessionStorage.removeItem('loginRedirectAttempted');
+                window.location.replace('/login.html');
             } catch (error) {
                 console.error('Logout error:', error);
             }
