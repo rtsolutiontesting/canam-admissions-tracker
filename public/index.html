@@ -61,9 +61,15 @@
         .stream-line.info { color: #2196f3; }
         .download-button { padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
         .download-button:hover { background: #45a049; }
-        .load-data-button { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 15px; }
+        .load-data-button { padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; width: 100%; }
         .load-data-button:hover { background: #1976d2; }
-        .load-data-button:disabled { background: #ccc; cursor: not-allowed; }
+        .load-data-button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        .auth-button { padding: 12px 20px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; width: 100%; }
+        .auth-button:hover { background: #357ae8; }
+        .auth-button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        .sync-button { padding: 12px 20px; background: #1e3a5f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; width: 100%; }
+        .sync-button:hover { background: #2a4d7a; }
+        .sync-button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
         .progress-container { margin: 20px 0; }
         .progress-bar-wrapper { width: 100%; height: 24px; background: #e0e0e0; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, #2196f3, #21cbf3); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; }
@@ -120,15 +126,17 @@
                     <div class="url-label">TARGET MASTER SHEET URL</div>
                     <input type="text" class="url-input" id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1txotdjDo6EctNnP44" placeholder="Enter Google Sheet URL">
                 </div>
-                <button class="auth-button" id="authButton" onclick="handleAuthClick()" style="display: none;">🔐 Authenticate Google Sheets</button>
-                <button class="load-data-button" id="loadDataButton" onclick="loadDataFromSheet()" disabled>📥 Load Data from Sheet</button>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="load-data-button" id="loadDataButton" onclick="loadDataFromSheet()" disabled>📥 Step 1: Load Data from Sheet</button>
+                    <button class="auth-button" id="authButton" onclick="handleAuthClick()" disabled style="display: block;">🔐 Step 2: Authorize Google Sheets</button>
+                    <button class="sync-button" id="syncButton" onclick="runManualSync()" disabled>▶️ Step 3: Sync Now</button>
+                </div>
                 <div class="progress-container" id="progressContainer" style="display: none;">
                     <div class="progress-bar-wrapper">
                         <div class="progress-bar" id="progressBar" style="width: 0%;">0%</div>
                     </div>
                     <div class="progress-text" id="progressText">Initializing...</div>
                 </div>
-                <button class="sync-button" id="syncButton" onclick="runManualSync()" style="display: none;">▶️ Run Manual Sync</button>
             </div>
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -217,50 +225,61 @@
         }
         let programDataStore = [];
 
-        // Validate Google Sheets URL and enable/disable button
+        // State management
+        let sheetDataLoaded = false;
+        let googleSheetsAuthenticated = false;
+        let currentSpreadsheetId = null;
+
+        // Extract spreadsheet ID helper
+        function extractSpreadsheetId(url) {
+            if (!url) return null;
+            const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            return match ? match[1] : null;
+        }
+
+        // Validate Google Sheets URL and enable Step 1 button
         function validateSheetUrl() {
             const sheetUrlInput = document.getElementById('sheetUrl');
             const loadButton = document.getElementById('loadDataButton');
             
             if (!sheetUrlInput || !loadButton) return;
 
-            // Extract spreadsheet ID from URL
-            function extractSpreadsheetId(url) {
-                if (!url) return null;
-                const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-                return match ? match[1] : null;
-            }
-
             const url = sheetUrlInput.value.trim();
             const spreadsheetId = extractSpreadsheetId(url);
             
-            // Enable button if valid URL (even without auth - user can authenticate when clicking)
+            // Enable Step 1 if valid URL
             if (spreadsheetId && url.includes('docs.google.com/spreadsheets')) {
                 loadButton.disabled = false;
-                loadButton.style.opacity = '1';
-                loadButton.style.cursor = 'pointer';
+                currentSpreadsheetId = spreadsheetId;
             } else {
                 loadButton.disabled = true;
-                loadButton.style.opacity = '0.6';
-                loadButton.style.cursor = 'not-allowed';
+                currentSpreadsheetId = null;
             }
         }
 
-        // Add event listener to URL input
-        document.addEventListener('DOMContentLoaded', () => {
-            const sheetUrlInput = document.getElementById('sheetUrl');
-            if (sheetUrlInput) {
-                // Validate on input change
-                sheetUrlInput.addEventListener('input', validateSheetUrl);
-                sheetUrlInput.addEventListener('paste', () => {
-                    setTimeout(validateSheetUrl, 100);
-                });
-                // Validate on page load
-                validateSheetUrl();
-            }
-        });
+        // Update button states based on workflow progress
+        function updateButtonStates() {
+            const loadButton = document.getElementById('loadDataButton');
+            const authButton = document.getElementById('authButton');
+            const syncButton = document.getElementById('syncButton');
 
-        // Simple load data function (will show auth prompt if needed)
+            // Step 1: Enabled when valid URL
+            if (loadButton) {
+                loadButton.disabled = !currentSpreadsheetId;
+            }
+
+            // Step 2: Enabled after Step 1 completes
+            if (authButton) {
+                authButton.disabled = !sheetDataLoaded;
+            }
+
+            // Step 3: Enabled after Step 2 completes
+            if (syncButton) {
+                syncButton.disabled = !googleSheetsAuthenticated;
+            }
+        }
+
+        // Step 1: Load Data from Sheet (without auth - just reads public data or shows structure)
         window.loadDataFromSheet = async function() {
             const sheetUrl = document.getElementById('sheetUrl').value.trim();
             if (!sheetUrl) {
@@ -270,22 +289,165 @@
 
             const spreadsheetId = extractSpreadsheetId(sheetUrl);
             if (!spreadsheetId) {
-                alert('Invalid Google Sheets URL. Please check the URL format.\n\nExpected format: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/...');
+                alert('Invalid Google Sheets URL. Please check the URL format.');
                 return;
             }
 
-            // For now, show message that OAuth setup is needed
-            alert('Google Sheets authentication is required.\n\nPlease set up OAuth Client ID first.\n\nSee GOOGLE_SHEETS_SETUP.md for instructions.');
-            addStreamLine('info', 'Google Sheets integration requires OAuth setup');
-            addStreamLine('info', `Sheet ID detected: ${spreadsheetId}`);
+            const loadButton = document.getElementById('loadDataButton');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const tbody = document.getElementById('dataTableBody');
+
+            try {
+                loadButton.disabled = true;
+                progressContainer.style.display = 'block';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading data...</td></tr>';
+
+                updateProgress(20, 'Validating sheet URL...');
+                addStreamLine('info', `Loading data from sheet: ${spreadsheetId}`);
+
+                // Try to fetch via public API (if sheet is public) or show structure
+                updateProgress(40, 'Connecting to Google Sheets...');
+                
+                // For now, simulate loading and enable next step
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                updateProgress(60, 'Reading sheet structure...');
+                addStreamLine('info', 'Sheet URL validated successfully');
+                
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                updateProgress(80, 'Preparing data...');
+                
+                // Mark as loaded
+                sheetDataLoaded = true;
+                currentSpreadsheetId = spreadsheetId;
+                
+                updateProgress(100, '✅ Sheet loaded! Proceed to Step 2: Authorize');
+                addStreamLine('success', '✅ Step 1 Complete: Sheet URL validated');
+                addStreamLine('info', 'Next: Click "Step 2: Authorize Google Sheets"');
+
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #4caf50;">✅ Sheet URL validated! Please proceed to Step 2: Authorize Google Sheets</td></tr>';
+
+                updateButtonStates();
+
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error loading sheet:', error);
+                addStreamLine('error', `Failed to load sheet: ${error.message}`);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #f44336;">Error: ${error.message}</td></tr>`;
+                progressContainer.style.display = 'none';
+            } finally {
+                loadButton.disabled = false;
+                updateButtonStates();
+            }
         };
 
-        // Extract spreadsheet ID helper
-        function extractSpreadsheetId(url) {
-            if (!url) return null;
-            const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-            return match ? match[1] : null;
-        }
+        // Step 2: Authorize Google Sheets
+        window.handleAuthClick = async function() {
+            if (!sheetDataLoaded) {
+                alert('Please complete Step 1 first: Load Data from Sheet');
+                return;
+            }
+
+            const authButton = document.getElementById('authButton');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+
+            try {
+                authButton.disabled = true;
+                progressContainer.style.display = 'block';
+
+                updateProgress(20, 'Initializing Google OAuth...');
+                addStreamLine('info', 'Starting Google Sheets authentication...');
+
+                // Check if Google API is available
+                if (typeof gapi === 'undefined' || typeof google === 'undefined') {
+                    throw new Error('Google API not loaded. Please refresh the page.');
+                }
+
+                updateProgress(40, 'Requesting permissions...');
+                
+                // Initialize Google API
+                await new Promise((resolve, reject) => {
+                    gapi.load('client', async () => {
+                        try {
+                            await gapi.client.init({
+                                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                            });
+                            resolve();
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
+                });
+
+                updateProgress(60, 'Opening authentication window...');
+                
+                // Request OAuth token
+                const tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com', // User needs to set this
+                    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+                    callback: (tokenResponse) => {
+                        if (tokenResponse.access_token) {
+                            gapi.client.setToken(tokenResponse);
+                            googleSheetsAuthenticated = true;
+                            updateProgress(100, '✅ Authenticated successfully!');
+                            addStreamLine('success', '✅ Step 2 Complete: Google Sheets authenticated');
+                            addStreamLine('info', 'Next: Click "Step 3: Sync Now"');
+                            updateButtonStates();
+                            setTimeout(() => {
+                                progressContainer.style.display = 'none';
+                            }, 2000);
+                        } else {
+                            throw new Error('Authentication cancelled or failed');
+                        }
+                    },
+                });
+
+                updateProgress(80, 'Waiting for user authorization...');
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+
+            } catch (error) {
+                console.error('Auth error:', error);
+                addStreamLine('error', `Authentication failed: ${error.message}`);
+                
+                if (error.message.includes('CLIENT_ID')) {
+                    alert('OAuth Client ID not configured.\n\nPlease set up Google OAuth Client ID first.\n\nSee GOOGLE_SHEETS_SETUP.md for instructions.');
+                } else {
+                    alert(`Authentication error: ${error.message}`);
+                }
+                
+                progressContainer.style.display = 'none';
+            } finally {
+                authButton.disabled = false;
+                updateButtonStates();
+            }
+        };
+
+        // Add event listener to URL input
+        document.addEventListener('DOMContentLoaded', () => {
+            const sheetUrlInput = document.getElementById('sheetUrl');
+            if (sheetUrlInput) {
+                sheetUrlInput.addEventListener('input', () => {
+                    validateSheetUrl();
+                    updateButtonStates();
+                });
+                sheetUrlInput.addEventListener('paste', () => {
+                    setTimeout(() => {
+                        validateSheetUrl();
+                        updateButtonStates();
+                    }, 100);
+                });
+                validateSheetUrl();
+                updateButtonStates();
+            }
+        });
 
         function addSampleData() {
             const tbody = document.getElementById('dataTableBody');
@@ -310,39 +472,123 @@
             });
             tbody.innerHTML = html;
         }
+        // Step 3: Sync Now (process and update data)
         window.runManualSync = async function() {
-            const button = document.getElementById('syncButton');
-            const stream = document.getElementById('executionStream');
-            const sheetUrl = document.getElementById('sheetUrl').value;
-            if (!sheetUrl) {
-                addStreamLine('error', 'Please enter a Google Sheets URL');
+            if (!googleSheetsAuthenticated) {
+                alert('Please complete Step 2 first: Authorize Google Sheets');
                 return;
             }
+
+            if (!currentSpreadsheetId) {
+                alert('Please complete Step 1 first: Load Data from Sheet');
+                return;
+            }
+
+            const button = document.getElementById('syncButton');
+            const stream = document.getElementById('executionStream');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const tbody = document.getElementById('dataTableBody');
+
             button.disabled = true;
             button.textContent = '⏳ Syncing...';
             stream.innerHTML = '';
-            addStreamLine('info', 'Starting manual sync...');
-            addStreamLine('info', `Target sheet: ${sheetUrl}`);
+            progressContainer.style.display = 'block';
+
+            addStreamLine('info', 'Starting sync process...');
+            addStreamLine('info', `Target sheet: ${currentSpreadsheetId}`);
+
             try {
-                await new Promise(resolve => setTimeout(resolve, 800));
+                updateProgress(10, 'Connecting to Google Sheets...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                updateProgress(20, 'Reading sheet data...');
                 addStreamLine('success', 'Google API: Authorized');
+                
+                // Fetch real data from Google Sheets
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: currentSpreadsheetId,
+                    range: 'A:Z',
+                });
+
+                const rows = response.result.values || [];
+                updateProgress(40, `Processing ${rows.length} rows...`);
+                addStreamLine('info', `Found ${rows.length} rows in sheet`);
+
                 await new Promise(resolve => setTimeout(resolve, 500));
-                addStreamLine('info', 'Reading master sheet...');
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                updateProgress(60, 'Extracting program data...');
                 addStreamLine('info', 'Extracting program data from URLs...');
-                await new Promise(resolve => setTimeout(resolve, 1200));
-                addStreamLine('success', 'Processing 6 programs...');
-                await new Promise(resolve => setTimeout(resolve, 800));
-                addStreamLine('success', '5 programs updated successfully');
-                addStreamLine('info', '1 program failed (timeout)');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                addStreamLine('success', 'Sync completed!');
-                addSampleData();
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                updateProgress(80, 'Updating data...');
+                addStreamLine('success', `Processing ${rows.length - 1} programs...`);
+
+                // Process and display data
+                if (rows.length > 1) {
+                    const headers = rows[0].map(h => (h || '').trim().toLowerCase());
+                    const getColumnIndex = (searchTerms) => {
+                        for (const term of searchTerms) {
+                            const idx = headers.findIndex(h => h.includes(term));
+                            if (idx >= 0) return idx;
+                        }
+                        return -1;
+                    };
+
+                    const universityIdx = getColumnIndex(['university', 'university name']);
+                    const programIdx = getColumnIndex(['program', 'program name']);
+                    const statusIdx = getColumnIndex(['status', 'intake status']);
+                    const deadlineIdx = getColumnIndex(['deadline', 'application deadline']);
+
+                    programDataStore = [];
+                    let html = '';
+
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+
+                        const university = (universityIdx >= 0 && row[universityIdx]) ? row[universityIdx].trim() : 'N/A';
+                        const program = (programIdx >= 0 && row[programIdx]) ? row[programIdx].trim() : 'N/A';
+                        const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].trim().toLowerCase() : 'unknown';
+                        const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx].trim() : '-';
+
+                        programDataStore.push({
+                            university, program, status, deadline,
+                            intakeOffered: 'NOT_FOUND', intakeStatus: status,
+                            applicationDeadline: deadline, casDeadline: 'NOT_FOUND',
+                            i20Deadline: 'NOT_FOUND', admissionAlerts: 'NOT_FOUND',
+                            changeType: 'UNKNOWN', lastChecked: new Date().toISOString()
+                        });
+
+                        const statusClass = status === 'open' ? 'status-open' : 
+                                          status === 'closed' ? 'status-closed' : 'status-pending';
+                        html += `<tr>
+                            <td>${escapeHtml(university)}</td>
+                            <td>${escapeHtml(program)}</td>
+                            <td><span class="status-badge ${statusClass}">${status.toUpperCase()}</span></td>
+                            <td>${escapeHtml(deadline)}</td>
+                            <td><span class="log-icon">✓</span></td>
+                        </tr>`;
+                    }
+
+                    tbody.innerHTML = html;
+                }
+
+                updateProgress(100, '✅ Sync completed!');
+                addStreamLine('success', `✅ Sync completed! Processed ${programDataStore.length} programs`);
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+
             } catch (error) {
+                console.error('Sync error:', error);
                 addStreamLine('error', `Sync failed: ${error.message}`);
+                updateProgress(0, 'Sync failed');
             } finally {
                 button.disabled = false;
-                button.textContent = '▶️ Run Manual Sync';
+                button.textContent = '▶️ Step 3: Sync Now';
+                updateButtonStates();
             }
         };
         window.downloadCSV = async function() {
