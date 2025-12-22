@@ -224,14 +224,22 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Check if user is already logged in
+        // Check if user is already logged in - with delay
+        let authChecked = false;
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Only redirect if not already on index page
-                if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') {
-                    window.location.href = 'index.html';
+            if (authChecked) return; // Prevent multiple checks
+            authChecked = true;
+            
+            // Small delay to let page fully load
+            setTimeout(() => {
+                if (user) {
+                    // Only redirect if not already on index page
+                    const currentPath = window.location.pathname;
+                    if (!currentPath.includes('index') && currentPath !== '/' && currentPath !== '/index.html') {
+                        window.location.href = '/index.html';
+                    }
                 }
-            }
+            }, 100);
         });
 
         // Login form handler
