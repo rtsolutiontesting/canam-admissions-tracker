@@ -216,6 +216,77 @@
             stream.scrollTop = stream.scrollHeight;
         }
         let programDataStore = [];
+
+        // Validate Google Sheets URL and enable/disable button
+        function validateSheetUrl() {
+            const sheetUrlInput = document.getElementById('sheetUrl');
+            const loadButton = document.getElementById('loadDataButton');
+            
+            if (!sheetUrlInput || !loadButton) return;
+
+            // Extract spreadsheet ID from URL
+            function extractSpreadsheetId(url) {
+                if (!url) return null;
+                const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                return match ? match[1] : null;
+            }
+
+            const url = sheetUrlInput.value.trim();
+            const spreadsheetId = extractSpreadsheetId(url);
+            
+            // Enable button if valid URL (even without auth - user can authenticate when clicking)
+            if (spreadsheetId && url.includes('docs.google.com/spreadsheets')) {
+                loadButton.disabled = false;
+                loadButton.style.opacity = '1';
+                loadButton.style.cursor = 'pointer';
+            } else {
+                loadButton.disabled = true;
+                loadButton.style.opacity = '0.6';
+                loadButton.style.cursor = 'not-allowed';
+            }
+        }
+
+        // Add event listener to URL input
+        document.addEventListener('DOMContentLoaded', () => {
+            const sheetUrlInput = document.getElementById('sheetUrl');
+            if (sheetUrlInput) {
+                // Validate on input change
+                sheetUrlInput.addEventListener('input', validateSheetUrl);
+                sheetUrlInput.addEventListener('paste', () => {
+                    setTimeout(validateSheetUrl, 100);
+                });
+                // Validate on page load
+                validateSheetUrl();
+            }
+        });
+
+        // Simple load data function (will show auth prompt if needed)
+        window.loadDataFromSheet = async function() {
+            const sheetUrl = document.getElementById('sheetUrl').value.trim();
+            if (!sheetUrl) {
+                alert('Please enter a Google Sheets URL');
+                return;
+            }
+
+            const spreadsheetId = extractSpreadsheetId(sheetUrl);
+            if (!spreadsheetId) {
+                alert('Invalid Google Sheets URL. Please check the URL format.\n\nExpected format: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/...');
+                return;
+            }
+
+            // For now, show message that OAuth setup is needed
+            alert('Google Sheets authentication is required.\n\nPlease set up OAuth Client ID first.\n\nSee GOOGLE_SHEETS_SETUP.md for instructions.');
+            addStreamLine('info', 'Google Sheets integration requires OAuth setup');
+            addStreamLine('info', `Sheet ID detected: ${spreadsheetId}`);
+        };
+
+        // Extract spreadsheet ID helper
+        function extractSpreadsheetId(url) {
+            if (!url) return null;
+            const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            return match ? match[1] : null;
+        }
+
         function addSampleData() {
             const tbody = document.getElementById('dataTableBody');
             const sampleData = [
