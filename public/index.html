@@ -403,8 +403,32 @@
                     throw new Error('No data found in sheet. Sheet may be empty.');
                 }
                 
-                if (lines.length === 1) {
-                    throw new Error('Only header row found. No data rows in sheet.');
+                // Debug: Show first few lines
+                addStreamLine('info', `First line (header): ${lines[0].substring(0, 100)}...`);
+                if (lines.length > 1) {
+                    addStreamLine('info', `Second line (first data): ${lines[1].substring(0, 100)}...`);
+                }
+                
+                // Filter out empty lines (lines with only commas or whitespace)
+                const nonEmptyLines = lines.filter(line => {
+                    const trimmed = line.trim();
+                    // Check if line has actual content (not just commas, quotes, or whitespace)
+                    return trimmed.length > 0 && trimmed.replace(/[,"\s]/g, '').length > 0;
+                });
+                
+                addStreamLine('info', `After filtering empty lines: ${nonEmptyLines.length} lines`);
+                
+                if (nonEmptyLines.length === 0) {
+                    throw new Error('No data found in sheet. Sheet may be empty.');
+                }
+                
+                if (nonEmptyLines.length === 1) {
+                    // Check if there are any rows below header that might be filtered
+                    addStreamLine('warning', 'Only header row found. Checking if sheet has data rows...');
+                    // Show raw CSV preview for debugging
+                    const preview = csvText.substring(0, 500);
+                    addStreamLine('info', `CSV preview (first 500 chars): ${preview}`);
+                    throw new Error('Only header row found. Please add data rows to your sheet below the header row.');
                 }
 
                 // Parse CSV line (handle quoted fields with commas)
@@ -461,10 +485,24 @@
                 programDataStore = [];
                 let html = '';
 
+                // Use non-empty lines for processing
+                const dataLines = nonEmptyLines.slice(1); // Skip header
+                addStreamLine('info', `Processing ${dataLines.length} data rows...`);
+                
                 let processedCount = 0;
-                for (let i = 1; i < lines.length; i++) {
-                    const row = parseCSVLine(lines[i]).map(cell => cell.replace(/^"|"$/g, '').trim());
-                    if (row.length === 0 || (!row[0] && row.every(cell => !cell))) continue;
+                for (let i = 0; i < dataLines.length; i++) {
+                    const row = parseCSVLine(dataLines[i]).map(cell => cell.replace(/^"|"$/g, '').trim());
+                    
+                    // Skip completely empty rows
+                    if (row.length === 0 || row.every(cell => !cell || cell === '')) {
+                        addStreamLine('info', `Skipping empty row ${i + 2}`);
+                        continue;
+                    }
+                    
+                    // If first cell is empty but others have data, still process it
+                    if (!row[0] && row.length > 1 && row.some(cell => cell)) {
+                        row[0] = 'N/A'; // Set default for empty first cell
+                    }
                     
                     processedCount++;
                     if (processedCount % 10 === 0) {
