@@ -279,7 +279,7 @@
             }
         }
 
-        // Step 1: Load Data from Sheet (without auth - just reads public data or shows structure)
+        // Step 1: Load Data from Sheet - Fetches REAL data from Google Sheets
         window.loadDataFromSheet = async function() {
             const sheetUrl = document.getElementById('sheetUrl').value.trim();
             if (!sheetUrl) {
@@ -294,6 +294,7 @@
             }
 
             const loadButton = document.getElementById('loadDataButton');
+            const authButton = document.getElementById('authButton');
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
@@ -304,31 +305,122 @@
                 progressContainer.style.display = 'block';
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading data...</td></tr>';
 
-                updateProgress(20, 'Validating sheet URL...');
-                addStreamLine('info', `Loading data from sheet: ${spreadsheetId}`);
+                updateProgress(10, 'Connecting to Google Sheets...');
+                addStreamLine('info', `Loading REAL data from sheet: ${spreadsheetId}`);
 
-                // Try to fetch via public API (if sheet is public) or show structure
-                updateProgress(40, 'Connecting to Google Sheets...');
+                // Fetch as CSV (works if sheet is public or shared)
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv`;
                 
-                // For now, simulate loading and enable next step
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                updateProgress(30, 'Fetching data...');
+                const response = await fetch(csvUrl);
                 
-                updateProgress(60, 'Reading sheet structure...');
-                addStreamLine('info', 'Sheet URL validated successfully');
+                if (!response.ok) {
+                    throw new Error('Cannot access sheet. Sheet may be private. Please authorize in Step 2.');
+                }
+
+                const csvText = await response.text();
+                updateProgress(60, 'Processing data...');
+                addStreamLine('info', 'Data received, parsing...');
+
+                // Parse CSV
+                const lines = csvText.split('\n').filter(line => line.trim());
+                if (lines.length === 0) {
+                    throw new Error('No data found in sheet');
+                }
+
+                // Parse headers (handle quoted CSV)
+                const parseCSVLine = (line) => {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current.trim());
+                    return result;
+                };
+
+                const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
                 
-                await new Promise(resolve => setTimeout(resolve, 800));
-                
-                updateProgress(80, 'Preparing data...');
-                
-                // Mark as loaded
+                // Find column indices
+                const getColumnIndex = (searchTerms) => {
+                    for (const term of searchTerms) {
+                        const idx = headers.findIndex(h => h.includes(term));
+                        if (idx >= 0) return idx;
+                    }
+                    return -1;
+                };
+
+                const universityIdx = getColumnIndex(['university', 'university name']);
+                const programIdx = getColumnIndex(['program', 'program name']);
+                const statusIdx = getColumnIndex(['status', 'intake status']);
+                const deadlineIdx = getColumnIndex(['deadline', 'application deadline']);
+                const intakeOfferedIdx = getColumnIndex(['intake', 'intake offered']);
+                const casDeadlineIdx = getColumnIndex(['cas', 'cas deadline']);
+                const i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline']);
+                const alertsIdx = getColumnIndex(['alert', 'note', 'admission alert']);
+
+                updateProgress(80, 'Formatting data...');
+
+                // Process data rows
+                programDataStore = [];
+                let html = '';
+
+                for (let i = 1; i < lines.length; i++) {
+                    const row = parseCSVLine(lines[i]).map(cell => cell.replace(/^"|"$/g, '').trim());
+                    if (row.length === 0 || !row[0]) continue;
+
+                    const university = (universityIdx >= 0 && row[universityIdx]) ? row[universityIdx] : 'N/A';
+                    const program = (programIdx >= 0 && row[programIdx]) ? row[programIdx] : 'N/A';
+                    const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].toLowerCase() : 'unknown';
+                    const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx] : '-';
+
+                    // Store for CSV
+                    programDataStore.push({
+                        university: university,
+                        program: program,
+                        status: status,
+                        deadline: deadline,
+                        intakeOffered: (intakeOfferedIdx >= 0 && row[intakeOfferedIdx]) ? row[intakeOfferedIdx] : 'NOT_FOUND',
+                        intakeStatus: status,
+                        applicationDeadline: deadline,
+                        casDeadline: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
+                        i20Deadline: (i20DeadlineIdx >= 0 && row[i20DeadlineIdx]) ? row[i20DeadlineIdx] : 'NOT_FOUND',
+                        admissionAlerts: (alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : 'NOT_FOUND',
+                        changeType: 'UNKNOWN',
+                        lastChecked: new Date().toISOString()
+                    });
+
+                    const statusClass = status === 'open' ? 'status-open' : 
+                                      status === 'closed' ? 'status-closed' : 'status-pending';
+                    const statusText = status.toUpperCase();
+
+                    html += '<tr>';
+                    html += `<td>${escapeHtml(university)}</td>`;
+                    html += `<td>${escapeHtml(program)}</td>`;
+                    html += `<td><span class="status-badge ${statusClass}">${statusText}</span></td>`;
+                    html += `<td>${escapeHtml(deadline)}</td>`;
+                    html += `<td><span class="log-icon">✓</span></td>`;
+                    html += '</tr>';
+                }
+
+                updateProgress(100, `✅ Loaded ${programDataStore.length} programs`);
+                tbody.innerHTML = html;
                 sheetDataLoaded = true;
                 currentSpreadsheetId = spreadsheetId;
-                
-                updateProgress(100, '✅ Sheet loaded! Proceed to Step 2: Authorize');
-                addStreamLine('success', '✅ Step 1 Complete: Sheet URL validated');
-                addStreamLine('info', 'Next: Click "Step 2: Authorize Google Sheets"');
 
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #4caf50;">✅ Sheet URL validated! Please proceed to Step 2: Authorize Google Sheets</td></tr>';
+                // Enable Step 2
+                authButton.disabled = false;
+                addStreamLine('success', `✅ Step 1 Complete: Loaded ${programDataStore.length} programs from REAL Google Sheet`);
+                addStreamLine('info', 'Next: Click "Step 2: Authorize Google Sheets"');
 
                 updateButtonStates();
 
@@ -338,14 +430,40 @@
 
             } catch (error) {
                 console.error('Error loading sheet:', error);
-                addStreamLine('error', `Failed to load sheet: ${error.message}`);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #f44336;">Error: ${error.message}</td></tr>`;
+                addStreamLine('error', `Failed: ${error.message}`);
+                
+                if (error.message.includes('private') || error.message.includes('Cannot access')) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #ff9800;">⚠️ Sheet requires authentication. Click "Step 2: Authorize Google Sheets" to continue.</td></tr>';
+                    // Enable auth button even if load failed (for private sheets)
+                    authButton.disabled = false;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #f44336;">Error: ${error.message}</td></tr>`;
+                }
                 progressContainer.style.display = 'none';
             } finally {
                 loadButton.disabled = false;
                 updateButtonStates();
             }
         };
+
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateProgress(percent, text) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            if (progressBar) {
+                progressBar.style.width = percent + '%';
+                progressBar.textContent = percent + '%';
+            }
+            if (progressText) {
+                progressText.textContent = text;
+            }
+        }
 
         // Step 2: Authorize Google Sheets
         window.handleAuthClick = async function() {
@@ -671,6 +789,15 @@
                 return `"${stringValue.replace(/"/g, '""')}"`;
             }
             return stringValue;
+        }
+
+        // Escape HTML helper (if not already defined)
+        if (typeof escapeHtml === 'undefined') {
+            window.escapeHtml = function(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
         }
     </script>
 </body>
