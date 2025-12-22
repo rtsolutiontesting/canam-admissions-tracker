@@ -1,0 +1,26 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "programSnapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lastUpdated",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "executionLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "startTime",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
+

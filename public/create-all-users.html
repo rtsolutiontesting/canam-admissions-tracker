@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create All Default Users - CANAM IAPPLY</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 { color: #1e3a5f; margin-bottom: 10px; text-align: center; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .btn:hover { background: #5568d3; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .user-list {
+            margin-top: 20px;
+        }
+        .user-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .user-item.success { background: #d4edda; }
+        .user-item.error { background: #f8d7da; }
+        .user-email { font-weight: 600; color: #333; }
+        .user-status { font-size: 14px; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Create All Default Users</h1>
+        <p class="subtitle">This will create all 3 default test users</p>
+        
+        <div id="message"></div>
+
+        <button class="btn" id="createAllBtn" onclick="createAllUsers()">
+            🚀 Create All Users
+        </button>
+
+        <div class="user-list" id="userList"></div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="login.html" style="color: #667eea; text-decoration: none;">← Back to Login</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Generate secure random password
+        function generateSecurePassword() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            let password = '';
+            for (let i = 0; i < 12; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return password;
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9L38LMVnlwRn3njGCamnj8fBXvh_601I",
+            authDomain: "programinfo-603ec.firebaseapp.com",
+            projectId: "programinfo-603ec",
+            storageBucket: "programinfo-603ec.firebasestorage.app",
+            messagingSenderId: "238141381016",
+            appId: "1:238141381016:web:27f10baf9b8f7208ef33ed",
+            measurementId: "G-RMW41YRN56"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const defaultUsers = [
+            // Note: Passwords should be set by administrator, not hardcoded
+            // These are placeholder emails - actual passwords should be provided securely
+            { email: 'admin@canamiapply.com', password: '', name: 'Admin User', role: 'ADMIN' },
+            { email: 'manager@canamiapply.com', password: '', name: 'Manager User', role: 'MANAGER' },
+            { email: 'user@canamiapply.com', password: '', name: 'Regular User', role: 'USER' }
+        ];
+
+        window.createAllUsers = async function() {
+            const button = document.getElementById('createAllBtn');
+            const messageDiv = document.getElementById('message');
+            const userList = document.getElementById('userList');
+
+            button.disabled = true;
+            button.textContent = 'Creating users...';
+            messageDiv.innerHTML = '<div class="info">⏳ Creating users, please wait...</div>';
+            userList.innerHTML = '';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const userData of defaultUsers) {
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                userItem.innerHTML = `
+                    <div class="user-email">${userData.email}</div>
+                    <div class="user-status">Creating...</div>
+                `;
+                userList.appendChild(userItem);
+
+                try {
+                    // Generate secure random password if not provided
+                    const password = userData.password || generateSecurePassword();
+                    await createUserWithEmailAndPassword(auth, userData.email, password);
+                    
+                    userItem.className = 'user-item success';
+                    userItem.innerHTML = `
+                        <div class="user-email">✅ ${userData.email}</div>
+                        <div class="user-status">Created successfully! Role: ${userData.role}</div>
+                    `;
+                    successCount++;
+
+                } catch (error) {
+                    if (error.code === 'auth/email-already-in-use') {
+                        userItem.className = 'user-item success';
+                        userItem.innerHTML = `
+                            <div class="user-email">⚠️ ${userData.email}</div>
+                            <div class="user-status">Already exists (ready to use)</div>
+                        `;
+                        successCount++;
+                    } else {
+                        userItem.className = 'user-item error';
+                        userItem.innerHTML = `
+                            <div class="user-email">❌ ${userData.email}</div>
+                            <div class="user-status">Error: ${error.message}</div>
+                        `;
+                        errorCount++;
+                    }
+                }
+            }
+
+            button.disabled = false;
+            button.textContent = '🚀 Create All Users';
+
+            if (successCount === defaultUsers.length) {
+                messageDiv.innerHTML = `
+                    <div class="success">
+                        ✅ All users created successfully!<br>
+                        You can now login with any of these credentials.<br>
+                        <a href="login.html" style="color: #155724; font-weight: 600;">Click here to login</a>
+                    </div>
+                `;
+            } else if (successCount > 0) {
+                messageDiv.innerHTML = `
+                    <div class="info">
+                        ⚠️ ${successCount} users created, ${errorCount} errors.<br>
+                        Check the list below for details.
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to create users. Make sure Authentication is enabled in Firebase Console.
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
+

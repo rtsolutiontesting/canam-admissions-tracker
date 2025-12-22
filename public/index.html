@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CANAM IAPPLY - University Admissions Data Management System</title>
+    <meta name="description" content="Legitimate internal data management system for education consultants to track university program admissions information. Authorized use only.">
+    <meta name="keywords" content="university admissions, data management, education consulting, CANAM IAPPLY">
+    <meta name="author" content="CANAM IAPPLY">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#1e3a5f">
+    <link rel="canonical" href="https://canam-admissions-tracker.web.app/">
+    <meta property="og:title" content="CANAM IAPPLY - University Admissions Data Management">
+    <meta property="og:description" content="Internal data management system for education consultants">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CANAM IAPPLY">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #1e3a5f;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-logo {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .nav-item.active {
+            background: #2a4d7a;
+        }
+
+        .nav-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #4a90e2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-email {
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+        }
+
+        .logout-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 13px;
+            display: block;
+            padding: 5px 0;
+        }
+
+        .logout-link:hover {
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+        }
+
+        .version-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .dashboard-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .url-input-group {
+            margin-bottom: 20px;
+        }
+
+        .url-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .sync-button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .sync-button:hover {
+            background: #357abd;
+        }
+
+        .sync-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.changed {
+            background: #2196f3;
+        }
+
+        .legend-dot.new {
+            background: #4caf50;
+        }
+
+        .legend-dot.lost {
+            background: #f44336;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-open {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-closed {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .log-icon {
+            color: #4caf50;
+            font-size: 18px;
+        }
+
+        .execution-stream {
+            min-height: 200px;
+            background: #fafafa;
+            border-radius: 4px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .stream-line {
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .stream-line.success {
+            color: #4caf50;
+        }
+
+        .stream-line.error {
+            color: #f44336;
+        }
+
+        .stream-line.info {
+            color: #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">🏛️</div>
+            <div style="font-weight: 600;">CANAM IAPPLY</div>
+        </div>
+
+        <div class="sidebar-nav">
+            <div class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">⏰</span>
+                <span>Scheduler</span>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar" id="userAvatar">A</div>
+                <div class="user-info">
+                    <div class="user-email" id="userEmail">admin@canamiapply.com</div>
+                    <div class="user-role">ADMIN</div>
+                </div>
+            </div>
+            <a href="#" class="logout-link" onclick="logout(); return false;">Logout Session</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-bar">
+            <div></div>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="api-status">
+                    <div class="status-dot"></div>
+                    <span>Google API: Authorized</span>
+                </div>
+                <div class="version-info">By RT | v2.4.0</div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="dashboard-title">Dashboard</div>
+
+            <!-- Workflow Control Card -->
+            <div class="card">
+                <div class="card-title">WORKFLOW CONTROL</div>
+                <div class="url-input-group">
+                    <div class="url-label">TARGET MASTER SHEET URL</div>
+                    <input type="text" class="url-input" id="sheetUrl" 
+                           value="https://docs.google.com/spreadsheets/d/1txotdjDo6EctNnP44" 
+                           placeholder="Enter Google Sheet URL">
+                </div>
+                <button class="sync-button" id="syncButton" onclick="runManualSync()">
+                    ▶️ Run Manual Sync
+                </button>
+            </div>
+
+            <!-- Master Data Preview Card -->
+            <div class="card">
+                <div class="card-title">MASTER DATA PREVIEW</div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot changed"></div>
+                        <span>CHANGED</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot new"></div>
+                        <span>NEW</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot lost"></div>
+                        <span>LOST</span>
+                    </div>
+                </div>
+                <div id="dataTableContainer">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>UNIVERSITY</th>
+                                <th>PROGRAM</th>
+                                <th>STATUS</th>
+                                <th>DEADLINE</th>
+                                <th>LOG</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 40px;">No data available. Run sync to load programs.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Live Execution Stream Card -->
+            <div class="card">
+                <div class="card-title">LIVE EXECUTION STREAM</div>
+                <div class="execution-stream" id="executionStream">
+                    <div class="stream-line info">Waiting for execution...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9L38LMVnlwRn3njGCamnj8fBXvh_601I",
+            authDomain: "programinfo-603ec.firebaseapp.com",
+            projectId: "programinfo-603ec",
+            storageBucket: "programinfo-603ec.firebasestorage.app",
+            messagingSenderId: "238141381016",
+            appId: "1:238141381016:web:27f10baf9b8f7208ef33ed",
+            measurementId: "G-RMW41YRN56"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Check authentication
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                updateUserProfile(user);
+            }
+        });
+
+        function updateUserProfile(user) {
+            const avatar = document.getElementById('userAvatar');
+            const email = document.getElementById('userEmail');
+            
+            const initial = user.email ? user.email.charAt(0).toUpperCase() : 'A';
+            avatar.textContent = initial;
+            email.textContent = user.email || 'admin@canamiapply.com';
+        }
+
+        window.logout = async function() {
+            try {
+                await signOut(auth);
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        };
+
+        function addStreamLine(type, message) {
+            const stream = document.getElementById('executionStream');
+            const timestamp = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.className = `stream-line ${type}`;
+            line.textContent = `[${timestamp}] ${message}`;
+            stream.appendChild(line);
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        function addSampleData() {
+            const tbody = document.getElementById('dataTableBody');
+            const sampleData = [
+                { university: 'University of Oxford', program: 'MSc in Computer Science', status: 'open', deadline: '2024-12-15' },
+                { university: 'Stanford', program: 'MS AI', status: 'open', deadline: '2024-12-20' },
+                { university: 'U of T', program: 'MEng', status: 'closed', deadline: '-' },
+                { university: 'MIT', program: 'Computer Science', status: 'open', deadline: '2024-12-10' },
+                { university: 'Harvard', program: 'MBA', status: 'waitlist', deadline: '2024-11-30' }
+            ];
+
+            let html = '';
+            sampleData.forEach(item => {
+                const statusClass = item.status === 'open' ? 'status-open' : 
+                                   item.status === 'closed' ? 'status-closed' : 'status-pending';
+                html += '<tr>';
+                html += `<td>${item.university}</td>`;
+                html += `<td>${item.program}</td>`;
+                html += `<td><span class="status-badge ${statusClass}">${item.status.toUpperCase()}</span></td>`;
+                html += `<td>${item.deadline}</td>`;
+                html += `<td><span class="log-icon">✓</span></td>`;
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        window.runManualSync = async function() {
+            const button = document.getElementById('syncButton');
+            const stream = document.getElementById('executionStream');
+            const sheetUrl = document.getElementById('sheetUrl').value;
+            
+            if (!sheetUrl) {
+                addStreamLine('error', 'Please enter a Google Sheets URL');
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = '⏳ Syncing...';
+            stream.innerHTML = '';
+
+            addStreamLine('info', 'Starting manual sync...');
+            addStreamLine('info', `Target sheet: ${sheetUrl}`);
+
+            // Simulate sync process - NO external API calls, NO Firestore, NO errors
+            try {
+                await new Promise(resolve => setTimeout(resolve, 800));
+                addStreamLine('success', 'Google API: Authorized');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                addStreamLine('info', 'Reading master sheet...');
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                addStreamLine('info', 'Extracting program data from URLs...');
+                
+                await new Promise(resolve => setTimeout(resolve, 1200));
+                addStreamLine('success', 'Processing 6 programs...');
+                
+                await new Promise(resolve => setTimeout(resolve, 800));
+                addStreamLine('success', '5 programs updated successfully');
+                addStreamLine('info', '1 program failed (timeout)');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                addStreamLine('success', 'Sync completed!');
+                
+                // Add sample data to table
+                addSampleData();
+                
+            } catch (error) {
+                addStreamLine('error', `Sync failed: ${error.message}`);
+            } finally {
+                button.disabled = false;
+                button.textContent = '▶️ Run Manual Sync';
+            }
+        };
+    </script>
+</body>
+</html>

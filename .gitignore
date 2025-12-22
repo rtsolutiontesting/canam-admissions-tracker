@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+service-account-key.json
+firebase-service-account-key.json
+.firebase/
+.firebaserc.local
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+# Cloudflare Pages
+.cache/
+.wrangler/

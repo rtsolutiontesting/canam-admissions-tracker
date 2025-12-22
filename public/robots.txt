@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /admin
+Disallow: /create-user
+Disallow: /create-all-users
+Allow: /
+Allow: /about
+Allow: /login
+

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create User - CANAM IAPPLY</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 { color: #1e3a5f; margin-bottom: 30px; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        input:focus { outline: none; border-color: #667eea; }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover { background: #5568d3; }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .credentials {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+        .credentials h3 { margin-bottom: 15px; color: #333; }
+        .cred-item {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .cred-item:last-child { border-bottom: none; }
+        .cred-label { font-weight: 600; color: #666; }
+        .cred-value { color: #333; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Create User Account</h1>
+        
+        <div id="message"></div>
+
+        <form id="createUserForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required placeholder="user@canamiapply.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password (min 6 characters)</label>
+                <input type="password" id="password" required minlength="6" placeholder="••••••••">
+            </div>
+
+            <div class="form-group">
+                <label for="displayName">Display Name</label>
+                <input type="text" id="displayName" required placeholder="John Doe">
+            </div>
+
+            <button type="submit" class="btn" id="createBtn">Create User</button>
+        </form>
+
+        <div class="credentials">
+            <h3>Need Access?</h3>
+            <div class="cred-item">
+                <div class="cred-label">Contact Administrator</div>
+                <div class="cred-value">
+                    For account access, contact:<br>
+                    <a href="mailto:admin@canamiapply.com">admin@canamiapply.com</a>
+                </div>
+            </div>
+            <div class="cred-item" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                <div class="cred-label" style="font-size: 12px; color: #666;">
+                    Credentials are provided securely by your administrator for authorized access only.
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="login.html" style="color: #667eea; text-decoration: none;">← Back to Login</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9L38LMVnlwRn3njGCamnj8fBXvh_601I",
+            authDomain: "programinfo-603ec.firebaseapp.com",
+            projectId: "programinfo-603ec",
+            storageBucket: "programinfo-603ec.firebasestorage.app",
+            messagingSenderId: "238141381016",
+            appId: "1:238141381016:web:27f10baf9b8f7208ef33ed",
+            measurementId: "G-RMW41YRN56"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const messageDiv = document.getElementById('message');
+            const createBtn = document.getElementById('createBtn');
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const displayName = document.getElementById('displayName').value;
+
+            messageDiv.innerHTML = '';
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating...';
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                
+                // Update display name (requires additional setup in production)
+                messageDiv.innerHTML = `
+                    <div class="success">
+                        ✅ User created successfully!<br>
+                        Email: ${email}<br>
+                        <a href="login.html" style="color: #155724; font-weight: 600;">Click here to login</a>
+                    </div>
+                `;
+                
+                // Reset form
+                document.getElementById('createUserForm').reset();
+
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create User';
+            }
+        });
+    </script>
+</body>
+</html>
+

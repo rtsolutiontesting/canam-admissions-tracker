@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - CANAM IAPPLY</title>
+    <meta name="description" content="Login to CANAM IAPPLY University Admissions Data Management System. Authorized users only.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#1e3a5f">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            padding: 50px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: #1e3a5f;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            color: #1e3a5f;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .demo-credentials {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .demo-credentials strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <div class="logo-icon">🏛️</div>
+            <h1>CANAM IAPPLY</h1>
+        </div>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">Sign in to continue</p>
+
+        <div id="message"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required placeholder="your@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn" id="loginBtn">Sign In</button>
+        </form>
+
+        <div class="divider">or</div>
+
+        <button class="btn btn-secondary" onclick="createAccount()">Create New Account</button>
+
+        <div class="demo-credentials">
+            <strong>Need Access?</strong>
+            <div style="margin-top: 10px;">
+                <div>Contact administrator at: <a href="mailto:admin@canamiapply.com">admin@canamiapply.com</a></div>
+                <div style="font-size: 12px; margin-top: 10px; color: #666;">
+                    Credentials are provided by your administrator for authorized access only.
+                </div>
+            </div>
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+                <a href="create-all-users.html" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                    👥 Create All Users
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword,
+            onAuthStateChanged 
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9L38LMVnlwRn3njGCamnj8fBXvh_601I",
+            authDomain: "programinfo-603ec.firebaseapp.com",
+            projectId: "programinfo-603ec",
+            storageBucket: "programinfo-603ec.firebasestorage.app",
+            messagingSenderId: "238141381016",
+            appId: "1:238141381016:web:27f10baf9b8f7208ef33ed",
+            measurementId: "G-RMW41YRN56"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Check if user is already logged in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            const loginBtn = document.getElementById('loginBtn');
+
+            // Clear previous messages safely
+            messageDiv.textContent = '';
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing in...';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // Show success message before redirect
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success';
+                successDiv.textContent = '✅ Login successful! Redirecting...';
+                messageDiv.appendChild(successDiv);
+                
+                // Redirect after short delay (better than immediate redirect)
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = `❌ ${error.message}`;
+                messageDiv.appendChild(errorDiv);
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
+            }
+        });
+
+        window.createAccount = async function() {
+            // Redirect to proper account creation page instead of using prompt()
+            window.location.href = 'create-user.html';
+        };
+    </script>
+</body>
+</html>
+
