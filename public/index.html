@@ -490,23 +490,19 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Check authentication - NO automatic redirect to prevent loops
+        // Check authentication - NO automatic redirects to prevent loops
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 // User is logged in - show dashboard
                 updateUserProfile(user);
             } else {
-                // User not logged in - show message or redirect only once
+                // User not logged in - show message instead of redirecting
+                // This prevents redirect loops
                 const currentPath = window.location.pathname.toLowerCase();
-                // Only redirect if we're on index.html or root, and haven't redirected yet
-                if ((currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('index.html')) 
-                    && !currentPath.includes('login') 
-                    && !sessionStorage.getItem('redirectAttempted')) {
-                    sessionStorage.setItem('redirectAttempted', 'true');
-                    // Small delay to prevent immediate redirect
-                    setTimeout(() => {
-                        window.location.replace('/login.html');
-                    }, 500);
+                if (currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('index.html')) {
+                    // Show a message or hide content, but don't redirect automatically
+                    // User can manually navigate to login
+                    console.log('User not authenticated - please login');
                 }
             }
         });

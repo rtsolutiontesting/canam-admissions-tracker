@@ -1,5 +1,4 @@
-# Cloudflare Pages redirects
-/login /login.html 200
+# Cloudflare Pages redirects - minimal to prevent loops
 /about /about.html 200
 /admin /admin.html 200
 /create-user /create-user.html 200

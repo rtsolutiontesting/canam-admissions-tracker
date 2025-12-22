@@ -228,18 +228,8 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 // User is logged in - but don't auto-redirect to prevent loops
-                // Redirect will happen after successful login form submission
-                const currentPath = window.location.pathname.toLowerCase();
-                // Only redirect if we haven't redirected yet and are on login page
-                if (currentPath.includes('login') 
-                    && !currentPath.includes('index') 
-                    && !sessionStorage.getItem('loginRedirectAttempted')) {
-                    sessionStorage.setItem('loginRedirectAttempted', 'true');
-                    // Small delay to prevent immediate redirect
-                    setTimeout(() => {
-                        window.location.replace('/index.html');
-                    }, 500);
-                }
+                // Redirect will ONLY happen after successful login form submission
+                console.log('User already logged in');
             }
         });
 
