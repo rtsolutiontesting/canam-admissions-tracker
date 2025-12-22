@@ -266,12 +266,17 @@
                 successDiv.innerHTML = '✅ Login successful! <a href="/index.html" style="color: white; text-decoration: underline;">Click here to go to dashboard</a> or wait 2 seconds...';
                 messageDiv.appendChild(successDiv);
                 
-                // PERMANENT FIX: Only redirect after explicit user action (login button click)
-                // Use replace() to avoid history issues, with delay to let user see success message
+                // PERMANENT FIX: Only redirect after explicit login - with safety check
                 setTimeout(() => {
-                    // Double-check we're still on login page before redirecting
+                    // Double-check: only redirect if still on login page and user is authenticated
                     if (window.location.pathname.includes('login')) {
-                        window.location.replace('/index.html');
+                        // Verify user is still logged in before redirecting
+                        const currentUser = auth.currentUser;
+                        if (currentUser) {
+                            window.location.replace('/index.html');
+                        } else {
+                            console.log('User session lost, not redirecting');
+                        }
                     }
                 }, 2000);
             } catch (error) {
