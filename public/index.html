@@ -363,6 +363,26 @@
         .stream-line.info {
             color: #2196f3;
         }
+
+        .download-button {
+            padding: 8px 16px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .download-button:hover {
+            background: #45a049;
+        }
+
+        .download-button:active {
+            background: #3d8b40;
+        }
     </style>
 </head>
 <body>
@@ -428,7 +448,12 @@
 
             <!-- Master Data Preview Card -->
             <div class="card">
-                <div class="card-title">MASTER DATA PREVIEW</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div class="card-title" style="margin: 0;">MASTER DATA PREVIEW</div>
+                    <button class="download-button" onclick="downloadCSV()" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                        📥 Download CSV
+                    </button>
+                </div>
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-dot changed"></div>
@@ -538,15 +563,76 @@
             stream.scrollTop = stream.scrollHeight;
         }
 
+        // Store program data for CSV export
+        let programDataStore = [];
+
         function addSampleData() {
             const tbody = document.getElementById('dataTableBody');
             const sampleData = [
-                { university: 'University of Oxford', program: 'MSc in Computer Science', status: 'open', deadline: '2024-12-15' },
-                { university: 'Stanford', program: 'MS AI', status: 'open', deadline: '2024-12-20' },
-                { university: 'U of T', program: 'MEng', status: 'closed', deadline: '-' },
-                { university: 'MIT', program: 'Computer Science', status: 'open', deadline: '2024-12-10' },
-                { university: 'Harvard', program: 'MBA', status: 'waitlist', deadline: '2024-11-30' }
+                { 
+                    university: 'University of Oxford', 
+                    program: 'MSc in Computer Science', 
+                    status: 'open', 
+                    deadline: '2024-12-15',
+                    intakeOffered: 'Fall, Spring',
+                    casDeadline: '2024-11-15',
+                    i20Deadline: 'NOT_FOUND',
+                    admissionAlerts: 'Early application recommended',
+                    changeType: 'CHANGED',
+                    lastChecked: new Date().toISOString()
+                },
+                { 
+                    university: 'Stanford', 
+                    program: 'MS AI', 
+                    status: 'open', 
+                    deadline: '2024-12-20',
+                    intakeOffered: 'Fall',
+                    casDeadline: 'NOT_FOUND',
+                    i20Deadline: '2024-11-20',
+                    admissionAlerts: 'GRE required',
+                    changeType: 'NEW',
+                    lastChecked: new Date().toISOString()
+                },
+                { 
+                    university: 'U of T', 
+                    program: 'MEng', 
+                    status: 'closed', 
+                    deadline: '-',
+                    intakeOffered: 'Fall',
+                    casDeadline: 'NOT_FOUND',
+                    i20Deadline: 'NOT_FOUND',
+                    admissionAlerts: 'Program closed for 2024',
+                    changeType: 'LOST',
+                    lastChecked: new Date().toISOString()
+                },
+                { 
+                    university: 'MIT', 
+                    program: 'Computer Science', 
+                    status: 'open', 
+                    deadline: '2024-12-10',
+                    intakeOffered: 'Fall, Spring',
+                    casDeadline: 'NOT_FOUND',
+                    i20Deadline: '2024-11-10',
+                    admissionAlerts: 'Highly competitive',
+                    changeType: 'CHANGED',
+                    lastChecked: new Date().toISOString()
+                },
+                { 
+                    university: 'Harvard', 
+                    program: 'MBA', 
+                    status: 'waitlist', 
+                    deadline: '2024-11-30',
+                    intakeOffered: 'Fall',
+                    casDeadline: 'NOT_FOUND',
+                    i20Deadline: '2024-10-30',
+                    admissionAlerts: 'Waitlist notification sent',
+                    changeType: 'NEW',
+                    lastChecked: new Date().toISOString()
+                }
             ];
+
+            // Store data for CSV export
+            programDataStore = sampleData;
 
             let html = '';
             sampleData.forEach(item => {
@@ -561,6 +647,118 @@
                 html += '</tr>';
             });
             tbody.innerHTML = html;
+        }
+
+        // CSV Download Function
+        window.downloadCSV = async function() {
+            try {
+                // Try to get data from Firestore first
+                let dataToExport = [];
+                
+                try {
+                    const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    const db = getFirestore(app);
+                    const snapshot = await getDocs(collection(db, 'programSnapshots'));
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const snapshot = data.lastSnapshot || {};
+                        dataToExport.push({
+                            university: data.programId?.split('_')[0] || 'Unknown',
+                            program: data.programId?.split('_').slice(1).join(' ') || 'Unknown',
+                            intakeOffered: snapshot.intakeOffered || 'NOT_FOUND',
+                            intakeStatus: snapshot.intakeStatus || 'NOT_FOUND',
+                            applicationDeadline: snapshot.applicationDeadline || 'NOT_FOUND',
+                            casDeadline: snapshot.casDeadline || 'NOT_FOUND',
+                            i20Deadline: snapshot.i20Deadline || 'NOT_FOUND',
+                            admissionAlerts: snapshot.admissionAlerts || 'NOT_FOUND',
+                            changeType: 'CHANGED', // Would need comparison logic
+                            lastChecked: data.lastUpdated?.toISOString() || new Date().toISOString()
+                        });
+                    });
+                } catch (firestoreError) {
+                    console.log('Firestore not available, using sample data:', firestoreError);
+                    // Fallback to stored sample data
+                    dataToExport = programDataStore.length > 0 ? programDataStore : [];
+                }
+
+                if (dataToExport.length === 0) {
+                    alert('No data available to export. Please run sync first.');
+                    return;
+                }
+
+                // Create CSV content
+                const headers = [
+                    'University',
+                    'Program',
+                    'Intake Offered',
+                    'Intake Status',
+                    'Application Deadline',
+                    'CAS Deadline (UK)',
+                    'I-20 Deadline (USA)',
+                    'Admission Alerts/Notes',
+                    'Change Type',
+                    'Last Checked (ISO)'
+                ];
+
+                const csvRows = [headers.join(',')];
+
+                dataToExport.forEach(item => {
+                    const row = [
+                        escapeCSV(item.university || ''),
+                        escapeCSV(item.program || ''),
+                        escapeCSV(item.intakeOffered || 'NOT_FOUND'),
+                        escapeCSV(item.intakeStatus || item.status || 'NOT_FOUND'),
+                        escapeCSV(item.applicationDeadline || item.deadline || 'NOT_FOUND'),
+                        escapeCSV(item.casDeadline || 'NOT_FOUND'),
+                        escapeCSV(item.i20Deadline || 'NOT_FOUND'),
+                        escapeCSV(item.admissionAlerts || 'NOT_FOUND'),
+                        escapeCSV(item.changeType || 'UNKNOWN'),
+                        escapeCSV(item.lastChecked || new Date().toISOString())
+                    ];
+                    csvRows.push(row.join(','));
+                });
+
+                const csvContent = csvRows.join('\n');
+
+                // Create date-stamped filename
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const filename = `admissions-data-${year}-${month}-${day}-${hours}-${minutes}-${seconds}.csv`;
+
+                // Download file
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                addStreamLine('success', `CSV downloaded: ${filename}`);
+            } catch (error) {
+                console.error('CSV download error:', error);
+                addStreamLine('error', `CSV download failed: ${error.message}`);
+                alert('Failed to download CSV. Please try again.');
+            }
+        };
+
+        // Helper function to escape CSV values
+        function escapeCSV(value) {
+            if (value === null || value === undefined) return '';
+            const stringValue = String(value);
+            // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
         }
 
         window.runManualSync = async function() {
