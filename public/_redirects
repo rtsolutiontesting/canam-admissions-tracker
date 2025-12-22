@@ -1,7 +1,9 @@
-# Cloudflare Pages redirects - minimal to prevent loops
+# Cloudflare Pages redirects - PERMANENT FIX: NO redirects that could cause loops
+# Only specific routes that don't conflict with main pages
 /about /about.html 200
 /admin /admin.html 200
 /create-user /create-user.html 200
 /create-all-users /create-all-users.html 200
 /privacy-policy /privacy-policy.html 200
+# NOTE: /login and /index.html are NOT redirected - access them directly
 

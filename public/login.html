@@ -224,12 +224,24 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Check if user is already logged in - NO automatic redirect to prevent loops
+        // PERMANENT FIX: NO automatic redirects - EVER
+        // Only redirect on explicit login button click
+        let authInitialized = false;
         onAuthStateChanged(auth, (user) => {
+            // Only run once to prevent multiple checks
+            if (authInitialized) return;
+            authInitialized = true;
+            
             if (user) {
-                // User is logged in - but don't auto-redirect to prevent loops
-                // Redirect will ONLY happen after successful login form submission
-                console.log('User already logged in');
+                // User already logged in - show message, NO redirect
+                console.log('User already logged in. You can visit /index.html if needed.');
+                const messageDiv = document.getElementById('message');
+                if (messageDiv) {
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'info';
+                    infoDiv.textContent = '✅ You are already logged in. You can visit the dashboard at /index.html';
+                    messageDiv.appendChild(infoDiv);
+                }
             }
         });
 
@@ -248,19 +260,20 @@
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                // Clear redirect flags
-                sessionStorage.removeItem('redirectAttempted');
-                sessionStorage.removeItem('loginRedirectAttempted');
-                // Show success message before redirect
+                // Show success message
                 const successDiv = document.createElement('div');
                 successDiv.className = 'success';
-                successDiv.textContent = '✅ Login successful! Redirecting...';
+                successDiv.innerHTML = '✅ Login successful! <a href="/index.html" style="color: white; text-decoration: underline;">Click here to go to dashboard</a> or wait 2 seconds...';
                 messageDiv.appendChild(successDiv);
                 
-                // Redirect after short delay
+                // PERMANENT FIX: Only redirect after explicit user action (login button click)
+                // Use replace() to avoid history issues, with delay to let user see success message
                 setTimeout(() => {
-                    window.location.replace('/index.html');
-                }, 1000);
+                    // Double-check we're still on login page before redirecting
+                    if (window.location.pathname.includes('login')) {
+                        window.location.replace('/index.html');
+                    }
+                }, 2000);
             } catch (error) {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'error';
