@@ -490,24 +490,24 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Check authentication - with delay to prevent immediate redirect
-        let authChecked = false;
+        // Check authentication - prevent redirect loop
+        let redirecting = false;
         onAuthStateChanged(auth, (user) => {
-            if (authChecked) return; // Prevent multiple checks
-            authChecked = true;
+            // Prevent multiple simultaneous redirects
+            if (redirecting) return;
             
-            // Small delay to let page fully load
-            setTimeout(() => {
-                if (!user) {
-                    // Only redirect if not already on login page
-                    const currentPath = window.location.pathname;
-                    if (!currentPath.includes('login') && currentPath !== '/login') {
-                        window.location.href = '/login.html';
-                    }
-                } else {
-                    updateUserProfile(user);
+            if (!user) {
+                const currentPath = window.location.pathname.toLowerCase();
+                // Only redirect if we're actually on index.html or root
+                if ((currentPath === '/' || currentPath === '/index.html' || currentPath.endsWith('index.html')) 
+                    && !currentPath.includes('login')) {
+                    redirecting = true;
+                    // Use replace instead of href to prevent back button issues
+                    window.location.replace('/login.html');
                 }
-            }, 100);
+            } else {
+                updateUserProfile(user);
+            }
         });
 
         function updateUserProfile(user) {
