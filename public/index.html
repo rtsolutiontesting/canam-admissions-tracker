@@ -862,12 +862,14 @@
                     alert('No data available to export. Please run sync first.');
                     return;
                 }
-                const headers = ['University', 'Program', 'Intake Offered', 'Intake Status', 'Application Deadline', 'CAS Deadline (UK)', 'I-20 Deadline (USA)', 'Admission Alerts/Notes', 'Change Type', 'Last Checked (ISO)'];
+                const headers = ['University', 'Program', 'Country', 'Admissions URL', 'Intake Offered', 'Intake Status', 'Application Deadline', 'CAS Deadline (UK)', 'I-20 Deadline (USA)', 'Admission Alerts/Notes', 'Change Type', 'Last Checked (ISO)'];
                 const csvRows = [headers.join(',')];
                 dataToExport.forEach(item => {
                     const row = [
                         escapeCSV(item.university || ''),
                         escapeCSV(item.program || ''),
+                        escapeCSV(item.country || 'N/A'),
+                        escapeCSV(item.url || item.admissionsPageUrl || 'N/A'),
                         escapeCSV(item.intakeOffered || 'NOT_FOUND'),
                         escapeCSV(item.intakeStatus || item.status || 'NOT_FOUND'),
                         escapeCSV(item.applicationDeadline || item.deadline || 'NOT_FOUND'),
