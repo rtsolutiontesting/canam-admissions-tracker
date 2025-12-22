@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CANAM IAPPLY - Dashboard</title>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; overflow: hidden; }
@@ -59,6 +61,16 @@
         .stream-line.info { color: #2196f3; }
         .download-button { padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
         .download-button:hover { background: #45a049; }
+        .load-data-button { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 15px; }
+        .load-data-button:hover { background: #1976d2; }
+        .load-data-button:disabled { background: #ccc; cursor: not-allowed; }
+        .progress-container { margin: 20px 0; }
+        .progress-bar-wrapper { width: 100%; height: 24px; background: #e0e0e0; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #2196f3, #21cbf3); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; }
+        .progress-text { font-size: 13px; color: #666; margin-top: 5px; }
+        .auth-button { padding: 10px 20px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 15px; }
+        .auth-button:hover { background: #357ae8; }
+        .auth-status { padding: 10px; background: #e8f5e9; border: 1px solid #4caf50; border-radius: 4px; margin-bottom: 15px; font-size: 13px; color: #2e7d32; }
     </style>
 </head>
 <body>
@@ -103,11 +115,20 @@
             <div class="dashboard-title">Dashboard</div>
             <div class="card">
                 <div class="card-title">WORKFLOW CONTROL</div>
+                <div id="authStatus" style="display: none;"></div>
                 <div class="url-input-group">
                     <div class="url-label">TARGET MASTER SHEET URL</div>
                     <input type="text" class="url-input" id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1txotdjDo6EctNnP44" placeholder="Enter Google Sheet URL">
                 </div>
-                <button class="sync-button" id="syncButton" onclick="runManualSync()">▶️ Run Manual Sync</button>
+                <button class="auth-button" id="authButton" onclick="handleAuthClick()" style="display: none;">🔐 Authenticate Google Sheets</button>
+                <button class="load-data-button" id="loadDataButton" onclick="loadDataFromSheet()" disabled>📥 Load Data from Sheet</button>
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="progressBar" style="width: 0%;">0%</div>
+                    </div>
+                    <div class="progress-text" id="progressText">Initializing...</div>
+                </div>
+                <button class="sync-button" id="syncButton" onclick="runManualSync()" style="display: none;">▶️ Run Manual Sync</button>
             </div>
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
