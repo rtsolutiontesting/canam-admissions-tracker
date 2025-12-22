@@ -470,14 +470,19 @@
                     return -1;
                 };
 
-                const universityIdx = getColumnIndex(['university', 'university name']);
-                const programIdx = getColumnIndex(['program', 'program name']);
-                const statusIdx = getColumnIndex(['status', 'intake status']);
-                const deadlineIdx = getColumnIndex(['deadline', 'application deadline']);
-                const intakeOfferedIdx = getColumnIndex(['intake', 'intake offered']);
-                const casDeadlineIdx = getColumnIndex(['cas', 'cas deadline']);
-                const i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline']);
-                const alertsIdx = getColumnIndex(['alert', 'note', 'admission alert']);
+                // Detect columns - match actual sheet column names
+                const universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
+                const programIdx = getColumnIndex(['programname', 'program', 'program name']);
+                const countryIdx = getColumnIndex(['country']);
+                const urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
+                const statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
+                const deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
+                const intakeOfferedIdx = getColumnIndex(['intake', 'intake offered', 'intakeoffered']);
+                const casDeadlineIdx = getColumnIndex(['cas', 'cas deadline', 'casdeadline']);
+                const i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline', 'i20deadline']);
+                const alertsIdx = getColumnIndex(['alert', 'note', 'admission alert', 'admissionalerts', 'notes']);
+                
+                addStreamLine('info', `Column indices - University: ${universityIdx}, Program: ${programIdx}, Country: ${countryIdx}, URL: ${urlIdx}`);
 
                 updateProgress(80, 'Formatting data...');
 
@@ -509,15 +514,25 @@
                         updateProgress(80 + (processedCount / lines.length) * 10, `Processing row ${processedCount}...`);
                     }
 
-                    const university = (universityIdx >= 0 && row[universityIdx]) ? row[universityIdx] : 'N/A';
-                    const program = (programIdx >= 0 && row[programIdx]) ? row[programIdx] : 'N/A';
-                    const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].toLowerCase() : 'unknown';
-                    const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx] : '-';
+                    const university = (universityIdx >= 0 && row[universityIdx]) ? row[universityIdx] : 
+                                     (row[1] ? row[1] : 'N/A'); // Fallback to column B
+                    const program = (programIdx >= 0 && row[programIdx]) ? row[programIdx] : 
+                                  (row[2] ? row[2] : 'N/A'); // Fallback to column C
+                    const country = (countryIdx >= 0 && row[countryIdx]) ? row[countryIdx] : 
+                                  (row[3] ? row[3] : 'N/A'); // Fallback to column D
+                    const url = (urlIdx >= 0 && row[urlIdx]) ? row[urlIdx] : 
+                              (row[4] ? row[4] : 'N/A'); // Fallback to column E
+                    
+                    // Status and deadline might not exist yet (will be extracted)
+                    const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].toLowerCase() : 'pending';
+                    const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx] : 'Not extracted yet';
 
-                    // Store for CSV
+                    // Store for CSV - include all available data
                     programDataStore.push({
                         university: university,
                         program: program,
+                        country: country,
+                        url: url,
                         status: status,
                         deadline: deadline,
                         intakeOffered: (intakeOfferedIdx >= 0 && row[intakeOfferedIdx]) ? row[intakeOfferedIdx] : 'NOT_FOUND',
@@ -526,7 +541,7 @@
                         casDeadline: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
                         i20Deadline: (i20DeadlineIdx >= 0 && row[i20DeadlineIdx]) ? row[i20DeadlineIdx] : 'NOT_FOUND',
                         admissionAlerts: (alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : 'NOT_FOUND',
-                        changeType: 'UNKNOWN',
+                        changeType: 'NEW', // New data from sheet
                         lastChecked: new Date().toISOString()
                     });
 
@@ -541,6 +556,11 @@
                     html += `<td>${escapeHtml(deadline)}</td>`;
                     html += `<td><span class="log-icon">✓</span></td>`;
                     html += '</tr>';
+                    
+                    // Log first few rows for debugging
+                    if (processedCount <= 3) {
+                        addStreamLine('info', `Row ${processedCount + 1}: ${university} - ${program.substring(0, 30)}...`);
+                    }
                 }
 
                 if (programDataStore.length === 0) {
