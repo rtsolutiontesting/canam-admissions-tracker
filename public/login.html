@@ -227,7 +227,10 @@
         // Check if user is already logged in
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                window.location.href = 'index.html';
+                // Only redirect if not already on index page
+                if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') {
+                    window.location.href = 'index.html';
+                }
             }
         });
 
