@@ -328,13 +328,17 @@
                             </div>
                         </div>
                         <div style="flex-shrink: 0;">
-                            <div class="error-preview-window" id="errorPreviewWindow" style="max-height: calc(100vh - 300px); position: sticky; top: 20px;">
-                                <div class="error-preview-title" style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>⚠️ Error Preview</span>
-                                    <span id="errorCount" style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px;">0</span>
+                            <div class="nlp-preview-window" id="nlpPreviewWindow" style="max-height: calc(100vh - 300px); position: sticky; top: 20px;">
+                                <div class="nlp-preview-title" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>🤖 NLP Preview - What We're Reading</span>
+                                    <span id="nlpItemCount" style="background: #2196f3; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px;">0</span>
                                 </div>
-                                <div id="errorPreviewContent" style="font-size: 11px; color: #666;">
-                                    No errors yet. Errors will appear here during sync.
+                                <div id="nlpPreviewContent" style="font-size: 11px; color: #666;">
+                                    <div style="text-align: center; padding: 20px; color: #999;">
+                                        <div style="font-size: 24px; margin-bottom: 8px;">📖</div>
+                                        <div>Ready to read and understand web pages...</div>
+                                        <div style="font-size: 10px; margin-top: 8px; color: #999;">Natural language insights will appear here as we scan each program page</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2166,9 +2170,12 @@ Rules:
                         statusText = 'WAITLIST';
                     }
 
-                    // Color code based on change type
+                    // Color code based on change type and newly fetched data
                     let rowClass = '';
-                    if (program.changeType === 'CHANGED') {
+                    if (program.isNewlyFetched) {
+                        // Highlight newly scraped/fetched data with bright green
+                        rowClass = 'style="background-color: #c8e6c9; border-left: 4px solid #4caf50;"'; // Bright green with left border
+                    } else if (program.changeType === 'CHANGED') {
                         rowClass = 'style="background-color: #e3f2fd;"'; // Light blue
                     } else if (program.changeType === 'NEW') {
                         rowClass = 'style="background-color: #e8f5e9;"'; // Light green
