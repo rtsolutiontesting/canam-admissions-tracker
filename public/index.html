@@ -1701,6 +1701,63 @@ Rules:
             }
         }
         
+        // NLP Preview - Natural Language Description
+        function addNLPPreview(programName, universityName, extractedData, isNew = false) {
+            const nlpPreview = document.getElementById('nlpPreviewContent');
+            const nlpCount = document.getElementById('nlpItemCount');
+            if (!nlpPreview) return;
+            
+            // Clear "ready" message if first item
+            if (nlpPreview.querySelector('div[style*="text-align: center"]')) {
+                nlpPreview.innerHTML = '';
+            }
+            
+            // Create natural language description
+            const descriptions = [];
+            
+            if (extractedData.intakesAvailable && extractedData.intakesAvailable !== 'NOT_FOUND') {
+                descriptions.push(`Found intake periods: <strong>${escapeHtml(extractedData.intakesAvailable)}</strong>`);
+            }
+            
+            if (extractedData.admissionDeadline && extractedData.admissionDeadline !== 'NOT_FOUND') {
+                descriptions.push(`Application deadline: <strong>${escapeHtml(extractedData.admissionDeadline)}</strong>`);
+            }
+            
+            if (extractedData.casDeadline && extractedData.casDeadline !== 'NOT_FOUND') {
+                descriptions.push(`CAS submission deadline: <strong>${escapeHtml(extractedData.casDeadline)}</strong>`);
+            }
+            
+            if (extractedData.remarks && extractedData.remarks !== 'NOT_FOUND' && extractedData.remarks !== 'Data extracted via pattern matching') {
+                descriptions.push(`Additional notes: <strong>${escapeHtml(extractedData.remarks)}</strong>`);
+            }
+            
+            if (descriptions.length === 0) {
+                descriptions.push('Could not find specific details on this page. The page may need manual review.');
+            }
+            
+            const nlpDiv = document.createElement('div');
+            nlpDiv.className = `nlp-item ${isNew ? 'new' : ''}`;
+            nlpDiv.innerHTML = `
+                <div class="nlp-item-header">📚 ${escapeHtml(universityName || 'Unknown University')}</div>
+                <div style="font-size: 11px; color: #666; margin-bottom: 6px;">Program: ${escapeHtml(programName || 'Unknown Program')}</div>
+                <div class="nlp-item-content">
+                    ${descriptions.join('<br>')}
+                </div>
+            `;
+            
+            nlpPreview.insertBefore(nlpDiv, nlpPreview.firstChild);
+            
+            // Keep only last 20 items
+            const items = nlpPreview.querySelectorAll('.nlp-item');
+            if (items.length > 20) {
+                items[items.length - 1].remove();
+            }
+            
+            // Update count
+            const currentCount = parseInt(nlpCount.textContent) || 0;
+            nlpCount.textContent = currentCount + 1;
+        }
+        
         function addErrorToPreview(programName, universityName, errorMessage) {
             const errorPreviewContent = document.getElementById('errorPreviewContent');
             const errorCount = document.getElementById('errorCount');
@@ -1984,8 +2041,17 @@ Rules:
                                         program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
                                         program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
                                         program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
-                                        program.changeType = 'CHANGED';
+                                        program.changeType = 'NEW'; // Mark as new/fetched data
+                                        program.isNewlyFetched = true; // Flag for highlighting
                                         program.lastChecked = new Date().toISOString();
+                                        
+                                        // Add NLP preview
+                                        addNLPPreview(
+                                            program.programName || program.program,
+                                            program.universityName || program.university,
+                                            extracted,
+                                            true // isNew
+                                        );
                                         
                                         successCount++;
                                         addStreamLine('success', `✅ [${processedCount}] Backend API extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}, Intakes: ${program.intakesAvailable}`);
@@ -2093,8 +2159,17 @@ Rules:
                                 program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
                                 program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
-                                program.changeType = 'CHANGED';
+                                program.changeType = 'NEW'; // Mark as new/fetched data
+                                program.isNewlyFetched = true; // Flag for highlighting
                                 program.lastChecked = new Date().toISOString();
+                                
+                                // Add NLP preview
+                                addNLPPreview(
+                                    program.programName || program.program,
+                                    program.universityName || program.university,
+                                    extracted,
+                                    true // isNew
+                                );
                                 
                                 successCount++;
                                 addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}`);
