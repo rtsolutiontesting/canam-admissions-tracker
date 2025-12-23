@@ -342,6 +342,165 @@
         </div>
     </div>
     
+    <!-- AI Configuration Functions - Must be in non-module script for onclick handlers -->
+    <script>
+        // AI Agent Configuration - Global functions for modal
+        let aiProvider = 'gemini';
+        let geminiApiKey = null;
+        let openaiApiKey = null;
+        
+        // Load AI configuration from localStorage
+        function loadAIConfigGlobal() {
+            try {
+                aiProvider = localStorage.getItem('aiProvider') || 'gemini';
+                geminiApiKey = localStorage.getItem('geminiApiKey') || null;
+                openaiApiKey = localStorage.getItem('openaiApiKey') || null;
+                updateAIStatusGlobal();
+                console.log('AI Config loaded:', { aiProvider, hasGeminiKey: !!geminiApiKey, hasOpenAIKey: !!openaiApiKey });
+            } catch (error) {
+                console.error('Error loading AI config:', error);
+            }
+        }
+        
+        // Save AI configuration
+        window.saveAIAgentConfig = function() {
+            try {
+                const geminiInput = document.getElementById('geminiApiKey');
+                const openaiInput = document.getElementById('openaiApiKey');
+                
+                if (!geminiInput || !openaiInput) {
+                    alert('Error: Could not find API key input fields');
+                    return;
+                }
+                
+                const geminiKey = geminiInput.value.trim();
+                const openaiKey = openaiInput.value.trim();
+                
+                if (aiProvider === 'gemini' && !geminiKey) {
+                    alert('Please enter your Gemini API key');
+                    return;
+                }
+                if (aiProvider === 'openai' && !openaiKey) {
+                    alert('Please enter your OpenAI API key');
+                    return;
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('aiProvider', aiProvider);
+                if (geminiKey) {
+                    localStorage.setItem('geminiApiKey', geminiKey);
+                } else {
+                    localStorage.removeItem('geminiApiKey');
+                }
+                if (openaiKey) {
+                    localStorage.setItem('openaiApiKey', openaiKey);
+                } else {
+                    localStorage.removeItem('openaiApiKey');
+                }
+                
+                // Update variables
+                geminiApiKey = geminiKey || null;
+                openaiApiKey = openaiKey || null;
+                
+                console.log('AI Config saved:', { aiProvider, hasGeminiKey: !!geminiApiKey, hasOpenAIKey: !!openaiApiKey });
+                
+                updateAIStatusGlobal();
+                
+                // Show success message
+                const statusDiv = document.getElementById('aiStatusDiv');
+                if (statusDiv) {
+                    statusDiv.className = 'ai-status configured';
+                    statusDiv.textContent = `✅ AI Agent configured (${aiProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'})`;
+                }
+                
+                // Try to call addStreamLine if available (from module script)
+                if (typeof window.addStreamLine === 'function') {
+                    window.addStreamLine('success', `✅ AI Agent configuration saved successfully! Using ${aiProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'}`);
+                }
+                
+                closeAIAgentConfig();
+            } catch (error) {
+                console.error('Error saving AI config:', error);
+                alert('Error saving configuration: ' + error.message);
+            }
+        };
+        
+        // Show AI Agent configuration modal
+        window.showAIAgentConfig = function() {
+            loadAIConfigGlobal();
+            const modal = document.getElementById('aiAgentModal');
+            if (!modal) {
+                console.error('AI Agent modal not found');
+                return;
+            }
+            const geminiInput = document.getElementById('geminiApiKey');
+            const openaiInput = document.getElementById('openaiApiKey');
+            if (geminiInput) geminiInput.value = geminiApiKey || '';
+            if (openaiInput) openaiInput.value = openaiApiKey || '';
+            selectProvider(aiProvider);
+            modal.classList.add('active');
+        };
+        
+        // Close AI Agent configuration modal
+        window.closeAIAgentConfig = function() {
+            const modal = document.getElementById('aiAgentModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        };
+        
+        // Select AI provider
+        window.selectProvider = function(provider) {
+            aiProvider = provider;
+            const geminiOption = document.getElementById('geminiOption');
+            const openaiOption = document.getElementById('openaiOption');
+            const openaiKeyGroup = document.getElementById('openaiKeyGroup');
+            const apiKeyLabel = document.getElementById('apiKeyLabel');
+            
+            if (geminiOption) geminiOption.classList.toggle('active', provider === 'gemini');
+            if (openaiOption) openaiOption.classList.toggle('active', provider === 'openai');
+            if (openaiKeyGroup) openaiKeyGroup.style.display = provider === 'openai' ? 'block' : 'none';
+            if (apiKeyLabel) apiKeyLabel.textContent = provider === 'gemini' ? 'Google Gemini API Key' : 'OpenAI API Key';
+        };
+        
+        // Update AI status display
+        function updateAIStatusGlobal() {
+            const statusDiv = document.getElementById('aiStatusDiv');
+            if (!statusDiv) return;
+            
+            const hasKey = (aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey);
+            if (hasKey) {
+                statusDiv.className = 'ai-status configured';
+                statusDiv.textContent = `✅ AI Agent configured (${aiProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'})`;
+            } else {
+                statusDiv.className = 'ai-status not-configured';
+                statusDiv.textContent = '⚠️ AI Agent not configured. Configure API keys to enable AI-powered extraction.';
+            }
+        }
+        
+        // Load config on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAIConfigGlobal();
+        });
+        
+        // Make config available to module script
+        window.getAIConfig = function() {
+            return {
+                aiProvider: aiProvider,
+                geminiApiKey: geminiApiKey,
+                openaiApiKey: openaiApiKey
+            };
+        };
+        
+        // Allow module script to update config
+        window.setAIConfig = function(config) {
+            aiProvider = config.aiProvider || aiProvider;
+            geminiApiKey = config.geminiApiKey !== undefined ? config.geminiApiKey : geminiApiKey;
+            openaiApiKey = config.openaiApiKey !== undefined ? config.openaiApiKey : openaiApiKey;
+            updateAIStatusGlobal();
+        };
+    </script>
+    
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -406,123 +565,24 @@
         let currentSpreadsheetId = null;
         let googleAccessToken = null;
         
-        // AI Agent Configuration
-        let aiProvider = 'gemini'; // 'gemini' or 'openai'
-        let geminiApiKey = null;
-        let openaiApiKey = null;
-        
-        // Load AI configuration from localStorage
-        function loadAIConfig() {
-            try {
-                aiProvider = localStorage.getItem('aiProvider') || 'gemini';
-                geminiApiKey = localStorage.getItem('geminiApiKey') || null;
-                openaiApiKey = localStorage.getItem('openaiApiKey') || null;
-                updateAIStatus();
-                console.log('AI Config loaded:', { aiProvider, hasGeminiKey: !!geminiApiKey, hasOpenAIKey: !!openaiApiKey });
-            } catch (error) {
-                console.error('Error loading AI config:', error);
+        // AI Agent Configuration - Use global config from non-module script
+        function getAIConfig() {
+            if (typeof window.getAIConfig === 'function') {
+                return window.getAIConfig();
             }
-        }
-        
-        // Save AI configuration
-        window.saveAIAgentConfig = function() {
-            try {
-                const geminiInput = document.getElementById('geminiApiKey');
-                const openaiInput = document.getElementById('openaiApiKey');
-                
-                if (!geminiInput || !openaiInput) {
-                    alert('Error: Could not find API key input fields');
-                    return;
-                }
-                
-                const geminiKey = geminiInput.value.trim();
-                const openaiKey = openaiInput.value.trim();
-                
-                if (aiProvider === 'gemini' && !geminiKey) {
-                    alert('Please enter your Gemini API key');
-                    return;
-                }
-                if (aiProvider === 'openai' && !openaiKey) {
-                    alert('Please enter your OpenAI API key');
-                    return;
-                }
-                
-                // Save to localStorage
-                localStorage.setItem('aiProvider', aiProvider);
-                if (geminiKey) {
-                    localStorage.setItem('geminiApiKey', geminiKey);
-                } else {
-                    localStorage.removeItem('geminiApiKey');
-                }
-                if (openaiKey) {
-                    localStorage.setItem('openaiApiKey', openaiKey);
-                } else {
-                    localStorage.removeItem('openaiApiKey');
-                }
-                
-                // Update variables
-                geminiApiKey = geminiKey || null;
-                openaiApiKey = openaiKey || null;
-                
-                console.log('AI Config saved:', { aiProvider, hasGeminiKey: !!geminiApiKey, hasOpenAIKey: !!openaiApiKey });
-                
-                updateAIStatus();
-                addStreamLine('success', `✅ AI Agent configuration saved successfully! Using ${aiProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'}`);
-                closeAIAgentConfig();
-            } catch (error) {
-                console.error('Error saving AI config:', error);
-                alert('Error saving configuration: ' + error.message);
-            }
-        }
-        
-        // Show AI Agent configuration modal
-        window.showAIAgentConfig = function() {
-            // Reload config from localStorage to ensure we have latest values
-            loadAIConfig();
-            const modal = document.getElementById('aiAgentModal');
-            if (!modal) {
-                console.error('AI Agent modal not found');
-                return;
-            }
-            const geminiInput = document.getElementById('geminiApiKey');
-            const openaiInput = document.getElementById('openaiApiKey');
-            if (geminiInput) geminiInput.value = geminiApiKey || '';
-            if (openaiInput) openaiInput.value = openaiApiKey || '';
-            selectProvider(aiProvider);
-            modal.classList.add('active');
-        }
-        
-        // Close AI Agent configuration modal
-        window.closeAIAgentConfig = function() {
-            document.getElementById('aiAgentModal').classList.remove('active');
-        }
-        
-        // Select AI provider
-        window.selectProvider = function(provider) {
-            aiProvider = provider;
-            document.getElementById('geminiOption').classList.toggle('active', provider === 'gemini');
-            document.getElementById('openaiOption').classList.toggle('active', provider === 'openai');
-            document.getElementById('openaiKeyGroup').style.display = provider === 'openai' ? 'block' : 'none';
-            document.getElementById('apiKeyLabel').textContent = provider === 'gemini' ? 'Google Gemini API Key' : 'OpenAI API Key';
-        }
-        
-        // Update AI status display
-        function updateAIStatus() {
-            const statusDiv = document.getElementById('aiStatusDiv');
-            const hasKey = (aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey);
-            if (hasKey) {
-                statusDiv.className = 'ai-status configured';
-                statusDiv.textContent = `✅ AI Agent configured (${aiProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'})`;
-            } else {
-                statusDiv.className = 'ai-status not-configured';
-                statusDiv.textContent = '⚠️ AI Agent not configured. Configure API keys to enable AI-powered extraction.';
-            }
+            // Fallback if global config not available
+            return {
+                aiProvider: localStorage.getItem('aiProvider') || 'gemini',
+                geminiApiKey: localStorage.getItem('geminiApiKey') || null,
+                openaiApiKey: localStorage.getItem('openaiApiKey') || null
+            };
         }
         
         // AI-powered extraction using Gemini or OpenAI
         async function extractWithAI(htmlContent, programName, universityName, url) {
-            const provider = aiProvider;
-            const apiKey = provider === 'gemini' ? geminiApiKey : openaiApiKey;
+            const config = getAIConfig();
+            const provider = config.aiProvider;
+            const apiKey = provider === 'gemini' ? config.geminiApiKey : config.openaiApiKey;
             
             if (!apiKey) {
                 throw new Error('AI API key not configured');
@@ -712,7 +772,7 @@ Rules:
         }
         
         // Load AI config on page load
-        loadAIConfig();
+        // AI config is loaded by global script, no need to load here
         
         // Google OAuth Configuration
         // User needs to set their OAuth Client ID
@@ -1657,6 +1717,7 @@ Rules:
                                     }
                                 } else {
                                     addStreamLine('warning', `[${processedCount}] AI Agent not configured. Configure in "Use AI Agent" menu for reliable extraction.`);
+                                    addStreamLine('info', `[${processedCount}] Falling back to pattern matching (less accurate)...`);
                                 }
                                 
                                 // Fallback: Try to fetch HTML for pattern matching (if AI not configured or API failed)
