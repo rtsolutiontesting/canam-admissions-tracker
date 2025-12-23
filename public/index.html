@@ -1231,7 +1231,10 @@ Rules:
 
             // Step 3: Enabled after Step 1 completes (data loaded)
             if (syncButton) {
-                syncButton.disabled = !sheetDataLoaded;
+                // Check both module variable and window property, and ensure programs exist
+                const isDataLoaded = sheetDataLoaded || (window.sheetDataLoaded === true);
+                const hasPrograms = programDataStore && programDataStore.length > 0;
+                syncButton.disabled = !(isDataLoaded && hasPrograms);
             }
         }
 
