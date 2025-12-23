@@ -1127,7 +1127,7 @@
                     const progressPercent = 20 + (processedCount / programDataStore.length) * 70;
                     updateProgress(progressPercent, `Processing ${processedCount}/${programDataStore.length}...`);
                     
-                    addStreamLine('info', `[${processedCount}/${programDataStore.length}] Processing: ${program.university} - ${program.program.substring(0, 40)}...`);
+                    addStreamLine('info', `[${processedCount}/${programDataStore.length}] Processing: ${program.universityName || program.university} - ${(program.programName || program.program || '').substring(0, 40)}...`);
 
                     try {
                         // Extract data from URL (simplified version - you can enhance this)
@@ -1326,6 +1326,75 @@
                 return `"${stringValue.replace(/"/g, '""')}"`;
             }
             return stringValue;
+        }
+
+        // Extract data from HTML content using pattern matching
+        function extractDataFromContent(htmlContent, programName, universityName, url) {
+            const result = {
+                admissionDeadline: 'NOT_FOUND',
+                casDeadline: 'NOT_FOUND',
+                intakeStatus: 'open',
+                remarks: ''
+            };
+            
+            try {
+                // Pattern matching for common date formats
+                const datePatterns = [
+                    /(?:deadline|closing|application\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:deadline|closing|application\s+deadline)[\s:]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})/gi,
+                    /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/g,
+                    /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})/gi
+                ];
+                
+                // Search for admission deadline
+                for (const pattern of datePatterns) {
+                    const matches = htmlContent.match(pattern);
+                    if (matches && matches.length > 0) {
+                        result.admissionDeadline = matches[0].trim();
+                        break;
+                    }
+                }
+                
+                // Search for CAS deadline (UK specific)
+                const casPatterns = [
+                    /(?:CAS|cas\s+deadline|cas\s+submission)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:CAS|cas\s+deadline|cas\s+submission)[\s:]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})/gi
+                ];
+                
+                for (const pattern of casPatterns) {
+                    const matches = htmlContent.match(pattern);
+                    if (matches && matches.length > 0) {
+                        result.casDeadline = matches[0].trim();
+                        break;
+                    }
+                }
+                
+                // Check for status keywords
+                if (/(?:closed|not\s+accepting|no\s+longer)/gi.test(htmlContent)) {
+                    result.intakeStatus = 'closed';
+                } else if (/(?:waitlist|waiting\s+list)/gi.test(htmlContent)) {
+                    result.intakeStatus = 'waitlist';
+                }
+                
+                // Extract any important notes
+                const notePatterns = [
+                    /(?:note|important|alert|warning)[\s:]*([^.!?]{10,200})/gi,
+                    /(?:early\s+application|apply\s+early|limited\s+seats)/gi
+                ];
+                
+                for (const pattern of notePatterns) {
+                    const matches = htmlContent.match(pattern);
+                    if (matches && matches.length > 0) {
+                        result.remarks = matches[0].trim().substring(0, 200);
+                        break;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Extraction error:', error);
+            }
+            
+            return result;
         }
 
         // Escape HTML helper (if not already defined)
