@@ -35,7 +35,8 @@
         .version-info { font-size: 11px; color: #999; white-space: nowrap; }
         .content-area { padding: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
         .action-buttons-top { display: flex; gap: 8px; align-items: center; padding: 12px 20px; background: white; border-bottom: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-wrap: wrap; }
-        .main-content-area { width: 100%; padding: 20px; }
+        .main-content-area { width: 100%; padding: 0; }
+        .dashboard-title { padding: 20px 20px 0; font-size: 24px; font-weight: 600; color: #333; }
         .dashboard-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #333; }
         .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; max-width: 100%; overflow-x: hidden; }
         .card.full-width { margin: 0; border-radius: 0; box-shadow: none; }
@@ -276,64 +277,71 @@
                 </div>
             </div>
             
-            <!-- Main Content - Full Width -->
-            <div class="main-content-area" style="width: 100%;">
-                <div class="dashboard-title">Dashboard</div>
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div class="card-title" style="margin: 0;">MASTER DATA PREVIEW</div>
-                    <button class="download-button" onclick="downloadCSV()">📥 Download CSV</button>
-                </div>
-                <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
-                        <div class="legend">
-                            <div class="legend-item"><div class="legend-dot changed"></div><span>CHANGED</span></div>
-                            <div class="legend-item"><div class="legend-dot new"></div><span>NEW</span></div>
-                            <div class="legend-item"><div class="legend-dot lost"></div><span>LOST</span></div>
-                        </div>
-                    </div>
-                    <div style="width: 300px; flex-shrink: 0;">
-                        <div class="error-preview-window" id="errorPreviewWindow">
-                            <div class="error-preview-title">
-                                ⚠️ Error Preview
-                                <span id="errorCount" style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: auto;">0</span>
-                            </div>
-                            <div id="errorPreviewContent" style="font-size: 11px; color: #666;">
-                                No errors yet. Errors will appear here during sync.
+            <!-- Main Content - Full Width Edge-to-Edge -->
+            <div class="main-content-area" style="width: 100%; padding: 0;">
+                <div class="dashboard-title" style="padding: 20px 20px 0;">Dashboard</div>
+                
+                <!-- Master Data Preview - Edge to Edge -->
+                <div class="card" style="margin: 0; border-radius: 0; box-shadow: none; border-top: 1px solid #e0e0e0; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div class="card-title" style="margin: 0;">MASTER DATA PREVIEW</div>
+                            <div class="legend">
+                                <div class="legend-item"><div class="legend-dot changed"></div><span>CHANGED</span></div>
+                                <div class="legend-item"><div class="legend-dot new"></div><span>NEW</span></div>
+                                <div class="legend-item"><div class="legend-dot lost"></div><span>LOST</span></div>
                             </div>
                         </div>
+                        <button class="download-button" onclick="downloadCSV()">📥 Download CSV</button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px; align-items: start;">
+                        <div style="min-width: 0; overflow-x: auto;">
+                            <div id="dataTableContainer" style="width: 100%; overflow-x: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Sr</th>
+                                            <th>universityName</th>
+                                            <th>Location</th>
+                                            <th>programName</th>
+                                            <th>admissionsPageUrl</th>
+                                            <th>intakesAvailable</th>
+                                            <th>admissionDeadline_found</th>
+                                            <th>casSubmissionDeadline_found</th>
+                                            <th>errorMessage</th>
+                                            <th>checkedDate</th>
+                                            <th>remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dataTableBody">
+                                        <tr><td colspan="11" style="text-align: center; padding: 40px;">No data available. Run sync to load programs.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div style="flex-shrink: 0;">
+                            <div class="error-preview-window" id="errorPreviewWindow" style="max-height: calc(100vh - 300px); position: sticky; top: 20px;">
+                                <div class="error-preview-title" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>⚠️ Error Preview</span>
+                                    <span id="errorCount" style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px;">0</span>
+                                </div>
+                                <div id="errorPreviewContent" style="font-size: 11px; color: #666;">
+                                    No errors yet. Errors will appear here during sync.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="dataTableContainer">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Sr</th>
-                                <th>universityName</th>
-                                <th>Location</th>
-                                <th>programName</th>
-                                <th>admissionsPageUrl</th>
-                                <th>intakesAvailable</th>
-                                <th>admissionDeadline_found</th>
-                                <th>casSubmissionDeadline_found</th>
-                                <th>errorMessage</th>
-                                <th>checkedDate</th>
-                                <th>remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dataTableBody">
-                            <tr><td colspan="5" style="text-align: center; padding: 40px;">No data available. Run sync to load programs.</td></tr>
-                        </tbody>
-                    </table>
+                
+                <!-- Live Execution Stream - Edge to Edge -->
+                <div class="card" style="margin: 0; border-radius: 0; border-top: 1px solid #e0e0e0; box-shadow: none; padding: 20px;">
+                    <div class="card-title">LIVE EXECUTION STREAM</div>
+                    <div class="execution-stream" id="executionStream">
+                        <div class="stream-line info">Waiting for execution...</div>
+                    </div>
                 </div>
             </div>
-            <div class="card">
-                <div class="card-title">LIVE EXECUTION STREAM</div>
-                <div class="execution-stream" id="executionStream">
-                    <div class="stream-line info">Waiting for execution...</div>
-                </div>
-            </div>
-        </div>
     </div>
     
     <!-- AI Agent Configuration Modal -->
