@@ -2022,6 +2022,10 @@ Rules:
                                     // Initialize AI progress with proper token limits
                                     const defaultTokenLimit = config.aiProvider === 'gemini' ? 1000000 : 100000; // Gemini has higher limits
                                     updateAIProgress(agentName, 0, defaultTokenLimit);
+                                    
+                                    let extracted = null;
+                                    let shouldFallbackToGemini = false;
+                                    
                                     try {
                                         const apiResponse = await fetch('/api/extract', {
                                             method: 'POST',
@@ -2033,16 +2037,70 @@ Rules:
                                                 programName: program.programName || program.program,
                                                 universityName: program.universityName || program.university,
                                                 aiProvider: config.aiProvider,
-                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey
+                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey,
+                                                geminiApiKey: config.geminiApiKey // Always send Gemini key for fallback
                                             })
                                         });
                                         
                                         if (!apiResponse.ok) {
                                             const errorData = await apiResponse.json().catch(() => ({ error: `HTTP ${apiResponse.status}` }));
-                                            throw new Error(errorData.error || `API returned HTTP ${apiResponse.status}`);
+                                            
+                                            // Check if it's a rate limit error with fallback suggestion
+                                            if (apiResponse.status === 429 && errorData.fallback && config.geminiApiKey && config.aiProvider === 'openai') {
+                                                shouldFallbackToGemini = true;
+                                                addStreamLine('warning', `[${processedCount}] ⚠️ OpenAI rate limit reached. Automatically switching to Gemini...`);
+                                            } else {
+                                                throw new Error(errorData.error || `API returned HTTP ${apiResponse.status}`);
+                                            }
+                                        } else {
+                                            extracted = await apiResponse.json();
                                         }
-                                        
-                                        const extracted = await apiResponse.json();
+                                    } catch (apiError) {
+                                        // Check if it's a rate limit error and we can fallback to Gemini
+                                        if ((apiError.message.includes('429') || apiError.message.includes('rate limit') || apiError.message.includes('Rate limit')) 
+                                            && config.geminiApiKey && config.aiProvider === 'openai') {
+                                            shouldFallbackToGemini = true;
+                                            addStreamLine('warning', `[${processedCount}] ⚠️ OpenAI rate limit reached. Automatically switching to Gemini...`);
+                                        } else {
+                                            throw apiError;
+                                        }
+                                    }
+                                    
+                                    // Automatic fallback to Gemini if OpenAI rate limited
+                                    if (shouldFallbackToGemini && config.geminiApiKey) {
+                                        try {
+                                            addStreamLine('info', `[${processedCount}] 🔄 Retrying with Gemini 1.5 Flash...`);
+                                            updateAIProgress('Gemini 1.5 Flash', 0, 1000000);
+                                            
+                                            const geminiResponse = await fetch('/api/extract', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                },
+                                                body: JSON.stringify({
+                                                    url: url,
+                                                    programName: program.programName || program.program,
+                                                    universityName: program.universityName || program.university,
+                                                    aiProvider: 'gemini',
+                                                    apiKey: config.geminiApiKey
+                                                })
+                                            });
+                                            
+                                            if (geminiResponse.ok) {
+                                                extracted = await geminiResponse.json();
+                                                const estimatedTokens = 2000;
+                                                updateAIProgress('Gemini 1.5 Flash', estimatedTokens, 0);
+                                                addStreamLine('success', `[${processedCount}] ✅ Successfully extracted using Gemini fallback`);
+                                            } else {
+                                                throw new Error(`Gemini fallback also failed: HTTP ${geminiResponse.status}`);
+                                            }
+                                        } catch (geminiError) {
+                                            addStreamLine('error', `[${processedCount}] Gemini fallback also failed: ${geminiError.message}`);
+                                            throw new Error(`Both OpenAI and Gemini failed. ${geminiError.message}`);
+                                        }
+                                    }
+                                    
+                                    if (extracted) {
                                         
                                         // Estimate tokens used (rough estimate: ~2000 tokens per request for full extraction)
                                         const estimatedTokens = 2000;
