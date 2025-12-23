@@ -2020,6 +2020,8 @@ Rules:
                                     // Use backend API for proper extraction (server-side, no CORS)
                                     addStreamLine('info', `[${processedCount}] 🤖 Using backend API with AI extraction (${agentName})...`);
                                     updateAIProgress(agentName, 0, 0); // Initialize AI progress
+                                    
+                                    let apiSuccess = false;
                                     try {
                                         const apiResponse = await fetch('/api/extract', {
                                             method: 'POST',
@@ -2150,10 +2152,16 @@ Rules:
                                             }
                                         }
                                         
+                                        apiSuccess = true;
                                         continue; // Skip to next program
                                     } catch (apiError) {
                                         addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
                                         // Fall through to pattern matching below
+                                    }
+                                    
+                                    // If API succeeded, we already continued, so this won't execute
+                                    if (apiSuccess) {
+                                        continue; // Extra safety check
                                     }
                                 } else {
                                     addStreamLine('warning', `[${processedCount}] AI Agent not configured. Configure in "Use AI Agent" menu for reliable extraction.`);
