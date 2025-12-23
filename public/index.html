@@ -1699,8 +1699,37 @@ Rules:
             }
         };
 
+        // Check for pending scheduled sync
+        function checkPendingSync() {
+            const pendingSync = localStorage.getItem('pendingSync');
+            if (pendingSync) {
+                try {
+                    const syncData = JSON.parse(pendingSync);
+                    const sheetUrlInput = document.getElementById('sheetUrl');
+                    if (sheetUrlInput && syncData.sheetUrl) {
+                        sheetUrlInput.value = syncData.sheetUrl;
+                        localStorage.removeItem('pendingSync');
+                        // Auto-trigger sync after a short delay
+                        setTimeout(() => {
+                            if (confirm('Scheduled sync detected. Would you like to run it now?')) {
+                                loadDataFromSheet().then(() => {
+                                    setTimeout(() => {
+                                        runManualSync();
+                                    }, 2000);
+                                });
+                            }
+                        }, 1000);
+                    }
+                } catch (e) {
+                    console.error('Error processing pending sync:', e);
+                }
+            }
+        }
+        
         // Add event listener to URL input
         document.addEventListener('DOMContentLoaded', () => {
+            checkPendingSync();
+            
             const sheetUrlInput = document.getElementById('sheetUrl');
             if (sheetUrlInput) {
                 sheetUrlInput.addEventListener('input', () => {
