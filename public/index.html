@@ -688,6 +688,23 @@
                 addStreamLineFn('success', `✅ Excel file parsed! Found ${jsonData.length} rows`);
                 addStreamLineFn('info', `Sheet name: ${firstSheetName}`);
 
+                // Load column mapping if exists
+                const savedMapping = localStorage.getItem('excelColumnMapping');
+                if (savedMapping) {
+                    try {
+                        const mapping = JSON.parse(savedMapping);
+                        // Store mapping for processSheetData to use
+                        window.excelColumnMapping = mapping;
+                        addStreamLineFn('info', `Using saved column mapping for ${Object.keys(mapping).length} fields`);
+                    } catch (e) {
+                        console.error('Error loading column mapping:', e);
+                    }
+                } else {
+                    // Clear any previous mapping
+                    window.excelColumnMapping = null;
+                    addStreamLineFn('info', 'No column mapping found. Using auto-detection.');
+                }
+
                 // Process data using shared function (will be called from module script)
                 // We need to call the processSheetData function from the module scope
                 if (typeof window.processSheetData === 'function') {
