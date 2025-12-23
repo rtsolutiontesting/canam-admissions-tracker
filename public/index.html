@@ -1872,9 +1872,16 @@ Rules:
             button.textContent = '⏳ Syncing...';
             stream.innerHTML = '';
             progressContainer.style.display = 'block';
+            
+            // Reset statistics
+            resetStats();
 
             addStreamLine('info', 'Starting sync process...');
             addStreamLine('info', `Processing ${programDataStore.length} programs...`);
+            
+            // Update initial program count
+            syncStats.programsFound = programDataStore.length;
+            updateStat('statProgramsFound', programDataStore.length);
 
             try {
                 updateProgress(10, 'Initializing extraction...');
@@ -1902,6 +1909,13 @@ Rules:
                     try {
                         // Extract data from URL - REAL FETCHING
                         const url = program.admissionsPageUrl || program.url;
+                        
+                        // Track URL scanned
+                        if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
+                            syncStats.urlsScanned++;
+                            updateStat('statUrlsScanned', syncStats.urlsScanned);
+                        }
+                        
                         if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
                             try {
                                 addStreamLine('info', `[${processedCount}] Processing: ${url.substring(0, 60)}...`);
