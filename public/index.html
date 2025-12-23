@@ -1746,22 +1746,59 @@ Rules:
                                 // Extract data from HTML content (pattern matching)
                                 let extracted;
                                 if (htmlContent) {
+                                    addStreamLine('info', `[${processedCount}] 🔍 Extracting data from HTML (checking hidden content, tabs, dropdowns)...`);
                                     extracted = extractDataFromContent(
                                         htmlContent,
                                         program.programName || program.program,
                                         program.universityName || program.university,
                                         url
                                     );
+                                    
+                                    // If pattern matching found little, try AI as enhancement
+                                    if (hasAIKey && (extracted.admissionDeadline === 'NOT_FOUND' || extracted.intakesAvailable === 'NOT_FOUND')) {
+                                        addStreamLine('info', `[${processedCount}] Pattern matching incomplete, enhancing with AI Agent...`);
+                                        try {
+                                            const aiEnhanced = await extractWithAI(htmlContent, program.programName || program.program, program.universityName || program.university, url);
+                                            
+                                            // Use AI results if they're better
+                                            if (aiEnhanced.admissionDeadline !== 'NOT_FOUND') extracted.admissionDeadline = aiEnhanced.admissionDeadline;
+                                            if (aiEnhanced.casDeadline !== 'NOT_FOUND') extracted.casDeadline = aiEnhanced.casDeadline;
+                                            if (aiEnhanced.intakesAvailable !== 'NOT_FOUND') extracted.intakesAvailable = aiEnhanced.intakesAvailable;
+                                            if (aiEnhanced.remarks && aiEnhanced.remarks !== 'NOT_FOUND') extracted.remarks = aiEnhanced.remarks;
+                                            
+                                            addStreamLine('success', `[${processedCount}] ✅ AI enhancement completed`);
+                                        } catch (aiError) {
+                                            addStreamLine('warning', `[${processedCount}] AI enhancement failed, using pattern matching results`);
+                                        }
+                                    }
                                 } else {
-                                    // No HTML available - return NOT_FOUND
-                                    extracted = {
-                                        admissionDeadline: 'NOT_FOUND',
-                                        casDeadline: 'NOT_FOUND',
-                                        intakesAvailable: 'NOT_FOUND',
-                                        intakeStatus: 'NOT_FOUND',
-                                        errorMessage: 'Unable to fetch HTML. Configure AI Agent for reliable extraction.',
-                                        remarks: 'HTML fetch failed. Use AI Agent for better results.'
-                                    };
+                                    // No HTML available - try AI directly if configured
+                                    if (hasAIKey) {
+                                        addStreamLine('info', `[${processedCount}] HTML fetch failed, using AI Agent directly...`);
+                                        try {
+                                            extracted = await extractWithAI(null, program.programName || program.program, program.universityName || program.university, url);
+                                            extracted.remarks = 'Extracted via AI Agent (HTML fetch failed)';
+                                        } catch (aiError) {
+                                            extracted = {
+                                                admissionDeadline: 'NOT_FOUND',
+                                                casDeadline: 'NOT_FOUND',
+                                                intakesAvailable: 'NOT_FOUND',
+                                                intakeStatus: 'NOT_FOUND',
+                                                errorMessage: `HTML fetch failed and AI extraction failed: ${aiError.message}`,
+                                                remarks: 'Both HTML fetch and AI extraction failed'
+                                            };
+                                        }
+                                    } else {
+                                        // No HTML and no AI - return NOT_FOUND
+                                        extracted = {
+                                            admissionDeadline: 'NOT_FOUND',
+                                            casDeadline: 'NOT_FOUND',
+                                            intakesAvailable: 'NOT_FOUND',
+                                            intakeStatus: 'NOT_FOUND',
+                                            errorMessage: 'Unable to fetch HTML. Configure AI Agent for reliable extraction.',
+                                            remarks: 'HTML fetch failed. Configure AI Agent for better results.'
+                                        };
+                                    }
                                 }
                                 
                                 // Update program with extracted data
@@ -1901,31 +1938,9 @@ Rules:
         };
         window.downloadCSV = async function() {
             try {
-                let dataToExport = [];
-                try {
-                    const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-                    const db = getFirestore(app);
-                    const snapshot = await getDocs(collection(db, 'programSnapshots'));
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        const snapshot = data.lastSnapshot || {};
-                        dataToExport.push({
-                            university: data.programId?.split('_')[0] || 'Unknown',
-                            program: data.programId?.split('_').slice(1).join(' ') || 'Unknown',
-                            intakeOffered: snapshot.intakeOffered || 'NOT_FOUND',
-                            intakeStatus: snapshot.intakeStatus || 'NOT_FOUND',
-                            applicationDeadline: snapshot.applicationDeadline || 'NOT_FOUND',
-                            casDeadline: snapshot.casDeadline || 'NOT_FOUND',
-                            i20Deadline: snapshot.i20Deadline || 'NOT_FOUND',
-                            admissionAlerts: snapshot.admissionAlerts || 'NOT_FOUND',
-                            changeType: 'CHANGED',
-                            lastChecked: data.lastUpdated?.toISOString() || new Date().toISOString()
-                        });
-                    });
-                } catch (firestoreError) {
-                    console.log('Firestore not available, using sample data:', firestoreError);
-                    dataToExport = programDataStore.length > 0 ? programDataStore : [];
-                }
+                // Use programDataStore directly (data from sync)
+                let dataToExport = programDataStore || [];
+                
                 if (dataToExport.length === 0) {
                     alert('No data available to export. Please run sync first.');
                     return;
