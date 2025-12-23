@@ -1216,12 +1216,28 @@
                         rowClass = 'style="background-color: #ffebee;"'; // Light red
                     }
 
+                    const srNum = program.sr || (i + 1);
+                    const uniName = program.universityName || program.university || 'N/A';
+                    const loc = program.location || program.country || 'NOT_FOUND';
+                    const progName = program.programName || program.program || 'N/A';
+                    const admUrl = program.admissionsPageUrl || program.url || '';
+                    const admDeadline = program.admissionDeadline_found || program.applicationDeadline || deadline || 'NOT_FOUND';
+                    const casDeadline = program.casSubmissionDeadline_found || program.casDeadline || 'NOT_FOUND';
+                    const errMsg = program.errorMessage || '';
+                    const checkDate = program.checkedDate || new Date().toISOString().split('T')[0];
+                    const remarks = program.remarks || program.admissionAlerts || '';
+                    
                     html += `<tr ${rowClass}>`;
-                    html += `<td>${escapeHtml(program.university)}</td>`;
-                    html += `<td>${escapeHtml(program.program)}</td>`;
-                    html += `<td><span class="status-badge ${statusClass}">${statusText}</span></td>`;
-                    html += `<td>${escapeHtml(deadline)}</td>`;
-                    html += `<td><span class="log-icon">✓</span></td>`;
+                    html += `<td>${srNum}</td>`;
+                    html += `<td>${escapeHtml(uniName)}</td>`;
+                    html += `<td>${escapeHtml(loc)}</td>`;
+                    html += `<td>${escapeHtml(progName)}</td>`;
+                    html += `<td><a href="${escapeHtml(admUrl)}" target="_blank" style="color: #2196f3; text-decoration: underline;">${escapeHtml(admUrl.length > 50 ? admUrl.substring(0, 50) + '...' : admUrl || 'N/A')}</a></td>`;
+                    html += `<td>${escapeHtml(admDeadline)}</td>`;
+                    html += `<td>${escapeHtml(casDeadline)}</td>`;
+                    html += `<td style="color: ${errMsg ? '#f44336' : '#4caf50'}; font-size: 12px;">${escapeHtml(errMsg)}</td>`;
+                    html += `<td>${checkDate}</td>`;
+                    html += `<td>${escapeHtml(remarks)}</td>`;
                     html += '</tr>';
                 }
 
