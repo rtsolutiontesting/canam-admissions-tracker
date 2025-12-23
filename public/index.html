@@ -33,9 +33,11 @@
         .api-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; white-space: nowrap; }
         .status-dot { width: 6px; height: 6px; background: #4caf50; border-radius: 50%; flex-shrink: 0; }
         .version-info { font-size: 11px; color: #999; white-space: nowrap; }
-        .content-area { padding: 20px; width: 100%; max-width: 100%; overflow-x: hidden; display: flex; gap: 20px; }
+        .content-area { padding: 20px; width: 100%; max-width: 100%; overflow-x: hidden; }
+        .action-buttons-top { display: flex; gap: 8px; align-items: center; padding: 12px 20px; background: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-wrap: wrap; }
         .left-sidebar { width: 280px; flex-shrink: 0; }
         .main-content-area { flex: 1; min-width: 0; }
+        .content-layout { display: flex; gap: 20px; }
         .dashboard-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #333; }
         .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; max-width: 100%; overflow-x: hidden; }
         .small-button { padding: 8px 12px; font-size: 12px; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
@@ -228,51 +230,80 @@
             </div>
         </div>
         <div class="content-area">
-            <div class="left-sidebar">
-                <div class="card">
-                    <div class="card-title" style="font-size: 13px; margin-bottom: 15px;">WORKFLOW</div>
-                    <div class="url-input-group" style="margin-bottom: 15px;">
-                        <div class="url-label" style="font-size: 10px;">SHEET URL</div>
-                        <input type="text" class="url-input" id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1txotdjDo6EctNnP44" placeholder="Google Sheet URL" style="font-size: 11px; padding: 8px;">
+            <!-- Action Buttons at Top -->
+            <div class="action-buttons-top">
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
+                    <div style="font-size: 11px; font-weight: 600; color: #666; white-space: nowrap;">SHEET URL:</div>
+                    <input type="text" class="url-input" id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1txotdjDo6EctNnP44" placeholder="Google Sheet URL" style="flex: 1; font-size: 11px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; min-width: 200px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display: none;" onchange="document.getElementById('excelFileName').textContent = this.files[0]?.name || 'No file chosen'">
+                    <label for="excelFileInput" class="small-button" style="background: #f5f5f5; color: #666; cursor: pointer; margin: 0;">
+                        📁 Choose File
+                    </label>
+                    <span id="excelFileName" style="font-size: 11px; color: #999; min-width: 100px;">No file chosen</span>
+                    <button class="small-button" id="uploadExcelButton" onclick="uploadExcelFile()" style="background: #2196f3; color: white; margin: 0;">
+                        📤 Upload & Load
+                    </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="small-button" id="authGoogleButton" onclick="authorizeGoogleDrive()" style="background: #4285f4; color: white; margin: 0;">
+                        🔐 Authorize Drive
+                    </button>
+                    <div id="authStatusDiv" style="display: none; padding: 4px 8px; background: #e8f5e9; border-radius: 4px; color: #2e7d32; font-size: 10px;">
+                        ✅ Authorized
                     </div>
-                    <div style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
-                        <div style="font-size: 10px; font-weight: 600; color: #666; margin-bottom: 8px;">UPLOAD EXCEL</div>
-                        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
-                        <button class="small-button" id="uploadExcelButton" onclick="uploadExcelFile()" style="background: #2196f3; color: white;">
-                            📤 Upload & Load
-                        </button>
+                    <button class="small-button" id="loadDataButton" onclick="loadDataFromSheet()" disabled style="background: #666; color: white; margin: 0;">📥 Load Data</button>
+                    <button class="small-button" id="authButton" onclick="handleAuthClick()" disabled style="display: none; background: #4285f4; color: white; margin: 0;">🔐 Auth Sheets</button>
+                    <button class="small-button" id="syncButton" onclick="runManualSync()" disabled style="background: #1e3a5f; color: white; margin: 0;">▶️ Sync Now</button>
+                </div>
+            </div>
+            
+            <!-- Progress Bars -->
+            <div class="progress-split-container" id="progressContainer" style="display: none; margin-bottom: 20px;">
+                <div class="progress-half">
+                    <div class="progress-half-title">Overall Progress</div>
+                    <div class="progress-bar-wrapper" style="height: 20px;">
+                        <div class="progress-bar" id="progressBar" style="width: 0%; font-size: 10px;">0%</div>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <button class="small-button" id="authGoogleButton" onclick="authorizeGoogleDrive()" style="background: #4285f4; color: white;">
-                            🔐 Authorize Drive
-                        </button>
-                        <div id="authStatusDiv" style="display: none; padding: 6px; background: #e8f5e9; border-radius: 4px; color: #2e7d32; font-size: 10px; margin-bottom: 6px;">
-                            ✅ Authorized
-                        </div>
-                        <button class="small-button" id="loadDataButton" onclick="loadDataFromSheet()" disabled style="background: #666; color: white;">📥 Load Data</button>
-                        <button class="small-button" id="authButton" onclick="handleAuthClick()" disabled style="display: none; background: #4285f4; color: white;">🔐 Auth Sheets</button>
-                        <button class="small-button" id="syncButton" onclick="runManualSync()" disabled style="background: #1e3a5f; color: white;">▶️ Sync Now</button>
+                    <div class="progress-text" id="progressText" style="font-size: 10px;">Initializing...</div>
+                </div>
+                <div class="progress-half">
+                    <div class="progress-half-title">AI Usage</div>
+                    <div class="progress-bar-wrapper" style="height: 20px; background: #e8f5e9;">
+                        <div class="progress-bar" id="aiProgressBar" style="width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a); font-size: 10px;">0%</div>
                     </div>
-                    <div class="progress-split-container" id="progressContainer" style="display: none; margin-top: 20px;">
-                        <div class="progress-half">
-                            <div class="progress-half-title">Overall Progress</div>
-                            <div class="progress-bar-wrapper" style="height: 20px;">
-                                <div class="progress-bar" id="progressBar" style="width: 0%; font-size: 10px;">0%</div>
+                    <div class="ai-progress-info" id="aiProgressInfo">Not using AI</div>
+                </div>
+            </div>
+            
+            <!-- Main Content Layout -->
+            <div class="content-layout">
+                <div class="left-sidebar">
+                    <div class="card">
+                        <div class="card-title" style="font-size: 13px; margin-bottom: 15px;">WORKFLOW GUIDE</div>
+                        <div style="font-size: 11px; color: #666; line-height: 1.6;">
+                            <div style="margin-bottom: 10px;">
+                                <strong>1. Enter Sheet URL</strong><br>
+                                Paste your Google Sheet URL above
                             </div>
-                            <div class="progress-text" id="progressText" style="font-size: 10px;">Initializing...</div>
-                        </div>
-                        <div class="progress-half">
-                            <div class="progress-half-title">AI Usage</div>
-                            <div class="progress-bar-wrapper" style="height: 20px; background: #e8f5e9;">
-                                <div class="progress-bar" id="aiProgressBar" style="width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a); font-size: 10px;">0%</div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>2. Authorize Drive</strong><br>
+                                Click "Authorize Drive" to grant access
                             </div>
-                            <div class="ai-progress-info" id="aiProgressInfo">Not using AI</div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>3. Load Data</strong><br>
+                                Click "Load Data" to fetch from sheet
+                            </div>
+                            <div>
+                                <strong>4. Sync Now</strong><br>
+                                Click "Sync Now" to extract data
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="main-content-area">
-                <div class="dashboard-title">Dashboard</div>
+                <div class="main-content-area">
+                    <div class="dashboard-title">Dashboard</div>
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div class="card-title" style="margin: 0;">MASTER DATA PREVIEW</div>
