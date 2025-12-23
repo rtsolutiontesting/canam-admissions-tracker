@@ -856,10 +856,22 @@
         // Expose state variables to window for global script access
         Object.defineProperty(window, 'sheetDataLoaded', {
             get: () => sheetDataLoaded,
-            set: (value) => { sheetDataLoaded = value; },
+            set: (value) => { 
+                sheetDataLoaded = value; 
+                // Auto-update button states when sheetDataLoaded changes
+                if (typeof updateButtonStates === 'function') {
+                    updateButtonStates();
+                }
+            },
             enumerable: true,
             configurable: true
         });
+        
+        // Helper function to set sheetDataLoaded and update buttons
+        window.setSheetDataLoaded = function(value) {
+            sheetDataLoaded = value;
+            updateButtonStates();
+        };
         
         Object.defineProperty(window, 'currentSpreadsheetId', {
             get: () => currentSpreadsheetId,
@@ -1706,6 +1718,10 @@ Rules:
                 updateProgress(100, `✅ Loaded ${programDataStore.length} programs`);
                 tbody.innerHTML = html;
                 sheetDataLoaded = true;
+                // Update window property to trigger button state update
+                if (window.sheetDataLoaded !== undefined) {
+                    window.sheetDataLoaded = true;
+                }
                 currentSpreadsheetId = spreadsheetId;
                 // Step 2 is now hidden (Google Drive auth is Step 0)
                 // Enable Step 3 (Sync Now)
