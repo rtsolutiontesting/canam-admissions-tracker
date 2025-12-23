@@ -630,8 +630,8 @@
 
                 // Read file as ArrayBuffer
                 const arrayBuffer = await file.arrayBuffer();
-                updateProgress(30, 'Parsing Excel data...');
-                addStreamLine('info', 'Parsing Excel file...');
+                updateProgressFn(30, 'Parsing Excel data...');
+                addStreamLineFn('info', 'Parsing Excel file...');
 
                 // Check if XLSX library is loaded
                 if (typeof XLSX === 'undefined') {
@@ -650,9 +650,9 @@
                     throw new Error('Excel file is empty or could not be parsed');
                 }
 
-                updateProgress(50, 'Processing data...');
-                addStreamLine('success', `✅ Excel file parsed! Found ${jsonData.length} rows`);
-                addStreamLine('info', `Sheet name: ${firstSheetName}`);
+                updateProgressFn(50, 'Processing data...');
+                addStreamLineFn('success', `✅ Excel file parsed! Found ${jsonData.length} rows`);
+                addStreamLineFn('info', `Sheet name: ${firstSheetName}`);
 
                 // Process data using shared function (will be called from module script)
                 // We need to call the processSheetData function from the module scope
@@ -660,7 +660,7 @@
                     await window.processSheetData(jsonData, 'excel');
                 } else {
                     // Fallback: basic processing
-                    addStreamLine('warning', 'Advanced processing not available. Using basic mode.');
+                    addStreamLineFn('warning', 'Advanced processing not available. Using basic mode.');
                     // Basic processing will be handled by the module script
                 }
 
@@ -671,15 +671,17 @@
                     updateButtonStates();
                 }
 
-                updateProgress(100, `✅ Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel`);
-                addStreamLine('success', `✅ Step 1 Complete: Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel file`);
-                addStreamLine('info', 'You can now proceed to Step 3: Sync Now');
+                updateProgressFn(100, `✅ Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel`);
+                addStreamLineFn('success', `✅ Step 1 Complete: Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel file`);
+                addStreamLineFn('info', 'You can now proceed to Step 3: Sync Now');
 
             } catch (error) {
                 console.error('Excel upload error:', error);
-                addStreamLine('error', `Excel upload failed: ${error.message}`);
+                const addStreamLineFn = window.addStreamLine || (() => {});
+                const updateProgressFn = window.updateProgress || (() => {});
+                addStreamLineFn('error', `Excel upload failed: ${error.message}`);
                 alert(`Failed to upload Excel file: ${error.message}`);
-                updateProgress(0, 'Upload failed');
+                updateProgressFn(0, 'Upload failed');
             } finally {
                 uploadButton.disabled = false;
                 setTimeout(() => {
@@ -811,6 +813,9 @@
             stream.appendChild(line);
             stream.scrollTop = stream.scrollHeight;
         }
+        
+        // Expose to window for global script access
+        window.addStreamLine = addStreamLine;
         let programDataStore = [];
 
         // State management
