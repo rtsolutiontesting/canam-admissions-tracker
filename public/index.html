@@ -2421,18 +2421,20 @@ Rules:
                     alert('No data available to export. Please run sync first.');
                     return;
                 }
-                const headers = ['Sr', 'universityName', 'Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'errorMessage', 'checkedDate', 'remarks'];
+                const headers = ['Sr', 'universityName', 'Campus Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'i20Deadline_found', 'intakeStatus', 'errorMessage', 'checkedDate', 'remarks'];
                 const csvRows = [headers.join(',')];
                 dataToExport.forEach((item, index) => {
                     const row = [
                         escapeCSV(item.sr || (index + 1)),
                         escapeCSV(item.universityName || item.university || ''),
-                        escapeCSV(item.location || item.country || 'NOT_FOUND'),
+                        escapeCSV(item.location || item.campusLocation || item.country || 'NOT_FOUND'),
                         escapeCSV(item.programName || item.program || ''),
                         escapeCSV(item.admissionsPageUrl || item.url || ''),
                         escapeCSV(item.intakesAvailable || item.intakeOffered || 'NOT_FOUND'),
                         escapeCSV(item.admissionDeadline_found || item.applicationDeadline || item.deadline || 'NOT_FOUND'),
                         escapeCSV(item.casSubmissionDeadline_found || item.casDeadline || 'NOT_FOUND'),
+                        escapeCSV(item.i20Deadline_found || item.i20Deadline || 'NOT_FOUND'),
+                        escapeCSV(item.intakeStatus || 'NOT_FOUND'),
                         escapeCSV(item.errorMessage || ''),
                         escapeCSV(item.checkedDate || new Date().toISOString().split('T')[0]),
                         escapeCSV(item.remarks || item.admissionAlerts || '')
