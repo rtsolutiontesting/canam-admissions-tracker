@@ -511,6 +511,7 @@
             const universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
             const programIdx = getColumnIndex(['programname', 'program', 'program name']);
             const countryIdx = getColumnIndex(['country']);
+            const locationIdx = getColumnIndex(['location', 'campus', 'campus location']);
             const urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
             const statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
             const deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
@@ -557,6 +558,8 @@
                               (row[2] ? row[2] : 'N/A'); // Fallback to column C
                 const country = (countryIdx >= 0 && row[countryIdx]) ? row[countryIdx] : 
                               (row[3] ? row[3] : 'N/A'); // Fallback to column D
+                const campusLocation = (locationIdx >= 0 && row[locationIdx]) ? row[locationIdx] : 
+                                     (country || 'NOT_FOUND'); // Use location column, fallback to country
                 const url = (urlIdx >= 0 && row[urlIdx]) ? row[urlIdx] : 
                           (row[4] ? row[4] : 'N/A'); // Fallback to column E
                 
@@ -566,7 +569,7 @@
 
                 // Store for CSV - match exact column structure
                 const srNumber = processedCount; // Serial number
-                const location = country || 'NOT_FOUND'; // Location from country column
+                const location = campusLocation || 'NOT_FOUND'; // Use campus location, not country
                 programDataStore.push({
                     sr: srNumber,
                     universityName: university,
@@ -830,6 +833,7 @@
                 const universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
                 const programIdx = getColumnIndex(['programname', 'program', 'program name']);
                 const countryIdx = getColumnIndex(['country']);
+                const locationIdx = getColumnIndex(['location', 'campus', 'campus location']);
                 const urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
                 const statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
                 const deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
@@ -876,6 +880,8 @@
                                   (row[2] ? row[2] : 'N/A'); // Fallback to column C
                     const country = (countryIdx >= 0 && row[countryIdx]) ? row[countryIdx] : 
                                   (row[3] ? row[3] : 'N/A'); // Fallback to column D
+                    const campusLocation = (locationIdx >= 0 && row[locationIdx]) ? row[locationIdx] : 
+                                         (country || 'NOT_FOUND'); // Use location column, fallback to country
                     const url = (urlIdx >= 0 && row[urlIdx]) ? row[urlIdx] : 
                               (row[4] ? row[4] : 'N/A'); // Fallback to column E
                     
@@ -885,7 +891,7 @@
 
                     // Store for CSV - match exact column structure
                     const srNumber = processedCount; // Serial number
-                    const location = country || 'NOT_FOUND'; // Location from country column
+                    const location = campusLocation || 'NOT_FOUND'; // Use campus location, not country
                     programDataStore.push({
                         sr: srNumber,
                         universityName: university,
@@ -1130,33 +1136,128 @@
                     addStreamLine('info', `[${processedCount}/${programDataStore.length}] Processing: ${program.universityName || program.university} - ${(program.programName || program.program || '').substring(0, 40)}...`);
 
                     try {
-                        // Extract data from URL (simplified version - you can enhance this)
+                        // Extract data from URL - REAL FETCHING
                         const url = program.admissionsPageUrl || program.url;
                         if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
                             try {
-                                // Simulate extraction (replace with actual extraction logic)
-                                // For now, we'll update fields to show processing
-                                program.admissionDeadline_found = '2024-12-31'; // Placeholder - replace with actual extraction
-                                program.casSubmissionDeadline_found = 'NOT_FOUND'; // Placeholder
-                                program.errorMessage = ''; // No error
+                                addStreamLine('info', `[${processedCount}] Fetching: ${url.substring(0, 60)}...`);
+                                
+                                // Safety: Add delay between requests to avoid blocking
+                                if (processedCount > 1) {
+                                    const delay = 2000 + Math.random() * 1000; // 2-3 seconds random delay
+                                    await new Promise(resolve => setTimeout(resolve, delay));
+                                }
+                                
+                                // Fetch HTML with safety headers
+                                let htmlContent = null;
+                                let fetchAttempts = 0;
+                                const maxRetries = 2; // Reduced since we have CORS proxy fallback
+                                let lastError = null;
+                                
+                                // Try direct fetch first
+                                try {
+                                    addStreamLine('info', `[${processedCount}] Attempting direct fetch...`);
+                                    const response = await fetch(url, {
+                                        method: 'GET',
+                                        headers: {
+                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                                            'Accept-Language': 'en-US,en;q=0.9',
+                                            'Connection': 'keep-alive',
+                                            'Upgrade-Insecure-Requests': '1',
+                                            'Cache-Control': 'max-age=0'
+                                        },
+                                        mode: 'cors',
+                                        cache: 'no-cache',
+                                        redirect: 'follow'
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                    
+                                    htmlContent = await response.text();
+                                    
+                                    if (!htmlContent || htmlContent.length < 100) {
+                                        throw new Error('Received empty or too short response');
+                                    }
+                                    
+                                    addStreamLine('success', `[${processedCount}] ✅ Fetched ${(htmlContent.length / 1024).toFixed(1)}KB from URL`);
+                                    
+                                } catch (fetchError) {
+                                    lastError = fetchError;
+                                    addStreamLine('warning', `[${processedCount}] Direct fetch failed: ${fetchError.message}`);
+                                    
+                                    // Check if it's a CORS error and try CORS proxy
+                                    if (fetchError.message.includes('Failed to fetch') || fetchError.name === 'TypeError' || fetchError.message.includes('CORS')) {
+                                        addStreamLine('info', `[${processedCount}] CORS blocked, trying CORS proxy...`);
+                                        try {
+                                            await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay before proxy
+                                            
+                                            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+                                            const proxyResponse = await fetch(proxyUrl, {
+                                                method: 'GET',
+                                                headers: {
+                                                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                                                },
+                                                mode: 'cors',
+                                                cache: 'no-cache'
+                                            });
+                                            
+                                            if (proxyResponse.ok) {
+                                                htmlContent = await proxyResponse.text();
+                                                if (htmlContent && htmlContent.length > 100) {
+                                                    addStreamLine('success', `[${processedCount}] ✅ Fetched via CORS proxy: ${(htmlContent.length / 1024).toFixed(1)}KB`);
+                                                } else {
+                                                    throw new Error('Proxy returned empty or too short response');
+                                                }
+                                            } else {
+                                                throw new Error(`Proxy returned HTTP ${proxyResponse.status}`);
+                                            }
+                                        } catch (proxyError) {
+                                            lastError = proxyError;
+                                            addStreamLine('error', `[${processedCount}] CORS proxy also failed: ${proxyError.message}`);
+                                        }
+                                    }
+                                }
+                                
+                                if (!htmlContent) {
+                                    throw lastError || new Error('Failed to fetch HTML - CORS blocked or network error');
+                                }
+                                
+                                // Extract data from HTML content
+                                const extracted = extractDataFromContent(
+                                    htmlContent,
+                                    program.programName || program.program,
+                                    program.universityName || program.university,
+                                    url
+                                );
+                                
+                                // Update program with extracted data
+                                program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
+                                program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
+                                program.errorMessage = extracted.errorMessage || '';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
-                                program.remarks = 'Data extracted successfully';
+                                program.remarks = extracted.remarks || 'Data extracted successfully';
                                 
                                 // Keep old fields for compatibility
-                                program.intakeStatus = 'open';
-                                program.applicationDeadline = '2024-12-31';
+                                program.intakeStatus = extracted.intakeStatus || 'open';
+                                program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
+                                program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
                                 program.changeType = 'CHANGED';
                                 program.lastChecked = new Date().toISOString();
                                 
                                 successCount++;
-                                addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.universityName || program.university}`);
+                                addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}`);
+                                
                             } catch (error) {
                                 program.errorMessage = `Failed to extract: ${error.message}`;
                                 program.admissionDeadline_found = 'NOT_FOUND';
                                 program.casSubmissionDeadline_found = 'NOT_FOUND';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
+                                program.remarks = `Error: ${error.message}`;
                                 errorCount++;
-                                addStreamLine('error', `❌ [${processedCount}] Extraction failed: ${program.universityName || program.university}`);
+                                addStreamLine('error', `❌ [${processedCount}] Extraction failed: ${program.universityName || program.university} - ${error.message}`);
                             }
                         } else {
                             program.admissionDeadline_found = 'NOT_FOUND';
@@ -1178,9 +1279,10 @@
                         addStreamLine('error', `❌ [${processedCount}] Failed: ${program.university} - ${error.message}`);
                     }
 
-                    // Small delay to prevent overwhelming
+                    // Additional delay every 5 requests for safety
                     if (processedCount % 5 === 0) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        addStreamLine('info', `[${processedCount}] Pausing for 3 seconds to avoid rate limiting...`);
+                        await new Promise(resolve => setTimeout(resolve, 3000));
                     }
                 }
 
@@ -1189,7 +1291,9 @@
 
                 // Update table with extracted data
                 let html = '';
+                let rowIndex = 0;
                 for (const program of programDataStore) {
+                    rowIndex++;
                     const status = program.intakeStatus || 'pending';
                     const deadline = program.applicationDeadline || 'Not extracted yet';
                     
@@ -1216,9 +1320,9 @@
                         rowClass = 'style="background-color: #ffebee;"'; // Light red
                     }
 
-                    const srNum = program.sr || (i + 1);
+                    const srNum = program.sr || rowIndex;
                     const uniName = program.universityName || program.university || 'N/A';
-                    const loc = program.location || program.country || 'NOT_FOUND';
+                    const loc = program.location || 'NOT_FOUND'; // Use campus location, not country
                     const progName = program.programName || program.program || 'N/A';
                     const admUrl = program.admissionsPageUrl || program.url || '';
                     const admDeadline = program.admissionDeadline_found || program.applicationDeadline || deadline || 'NOT_FOUND';
@@ -1348,64 +1452,107 @@
                 admissionDeadline: 'NOT_FOUND',
                 casDeadline: 'NOT_FOUND',
                 intakeStatus: 'open',
-                remarks: ''
+                remarks: '',
+                errorMessage: ''
             };
             
             try {
-                // Pattern matching for common date formats
+                // Remove script and style tags to get cleaner text
+                const cleanContent = htmlContent
+                    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+                    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .toLowerCase();
+                
+                // More comprehensive date patterns
                 const datePatterns = [
-                    /(?:deadline|closing|application\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
-                    /(?:deadline|closing|application\s+deadline)[\s:]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})/gi,
-                    /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/g,
-                    /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})/gi
+                    // Format: "deadline: MM/DD/YYYY" or "deadline: DD/MM/YYYY"
+                    /(?:application\s+deadline|admission\s+deadline|deadline|closing\s+date)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    // Format: "deadline: January 15, 2024"
+                    /(?:application\s+deadline|admission\s+deadline|deadline|closing\s+date)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    // Format: "15 January 2024"
+                    /(?:application\s+deadline|admission\s+deadline|deadline)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    // Generic date patterns near deadline keywords
+                    /(?:deadline|due\s+date|application\s+closes)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:deadline|due\s+date|application\s+closes)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
                 ];
                 
                 // Search for admission deadline
+                let deadlineFound = false;
                 for (const pattern of datePatterns) {
-                    const matches = htmlContent.match(pattern);
+                    const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        result.admissionDeadline = matches[0].trim();
-                        break;
+                        // Take the first match and clean it
+                        let deadline = matches[0].replace(/(?:deadline|closing|application|admission|due\s+date|closes)[\s:]*/gi, '').trim();
+                        if (deadline) {
+                            result.admissionDeadline = deadline;
+                            deadlineFound = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // If no deadline found, try to find any date near deadline-related text
+                if (!deadlineFound) {
+                    const contextPattern = /(?:deadline|application|admission|closing)[^.]{0,100}(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi;
+                    const contextMatch = cleanContent.match(contextPattern);
+                    if (contextMatch && contextMatch.length > 0) {
+                        const dateMatch = contextMatch[0].match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
+                        if (dateMatch) {
+                            result.admissionDeadline = dateMatch[1].trim();
+                            deadlineFound = true;
+                        }
                     }
                 }
                 
                 // Search for CAS deadline (UK specific)
                 const casPatterns = [
-                    /(?:CAS|cas\s+deadline|cas\s+submission)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
-                    /(?:CAS|cas\s+deadline|cas\s+submission)[\s:]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})/gi
+                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    /(?:confirmation\s+of\s+acceptance\s+for\s+studies|cas)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi
                 ];
                 
                 for (const pattern of casPatterns) {
-                    const matches = htmlContent.match(pattern);
+                    const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        result.casDeadline = matches[0].trim();
-                        break;
+                        let casDeadline = matches[0].replace(/(?:cas|confirmation\s+of\s+acceptance|deadline|submission)[\s:]*/gi, '').trim();
+                        if (casDeadline) {
+                            result.casDeadline = casDeadline;
+                            break;
+                        }
                     }
                 }
                 
                 // Check for status keywords
-                if (/(?:closed|not\s+accepting|no\s+longer)/gi.test(htmlContent)) {
+                if (/(?:closed|not\s+accepting|no\s+longer\s+accepting|applications\s+closed)/gi.test(cleanContent)) {
                     result.intakeStatus = 'closed';
-                } else if (/(?:waitlist|waiting\s+list)/gi.test(htmlContent)) {
+                } else if (/(?:waitlist|waiting\s+list|wait\s+list)/gi.test(cleanContent)) {
                     result.intakeStatus = 'waitlist';
+                } else if (/(?:open|accepting|now\s+accepting)/gi.test(cleanContent)) {
+                    result.intakeStatus = 'open';
                 }
                 
-                // Extract any important notes
+                // Extract any important notes/alerts
                 const notePatterns = [
-                    /(?:note|important|alert|warning)[\s:]*([^.!?]{10,200})/gi,
-                    /(?:early\s+application|apply\s+early|limited\s+seats)/gi
+                    /(?:important\s+note|alert|warning|notice)[\s:]*([^.!?]{20,300})/gi,
+                    /(?:early\s+application|apply\s+early|limited\s+seats|limited\s+availability)/gi
                 ];
                 
                 for (const pattern of notePatterns) {
-                    const matches = htmlContent.match(pattern);
+                    const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        result.remarks = matches[0].trim().substring(0, 200);
-                        break;
+                        let note = matches[0].replace(/(?:important|note|alert|warning|notice)[\s:]*/gi, '').trim();
+                        if (note && note.length > 10) {
+                            result.remarks = note.substring(0, 200);
+                            break;
+                        }
                     }
                 }
                 
             } catch (error) {
                 console.error('Extraction error:', error);
+                result.errorMessage = `Extraction error: ${error.message}`;
             }
             
             return result;
