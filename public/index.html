@@ -2508,8 +2508,98 @@ Rules:
             };
             
             try {
-                // Enhanced HTML parsing: Extract content from tabs, dropdowns, and hidden elements
+                // HUMAN-LIKE READING: Extract ALL visible text like a human would scan the page
                 let enhancedContent = htmlContent;
+                
+                // Step 1: Extract text from headings (humans read these first)
+                const headings = htmlContent.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi);
+                if (headings) {
+                    headings.forEach(h => {
+                        const text = h.replace(/<[^>]+>/g, '').trim();
+                        if (text.length > 3) enhancedContent += ' HEADING: ' + text + ' ';
+                    });
+                }
+                
+                // Step 2: Extract from main content areas
+                const mainContent = htmlContent.match(/<main[^>]*>([\s\S]*?)<\/main>/gi);
+                if (mainContent) {
+                    mainContent.forEach(m => {
+                        enhancedContent += ' ' + m.replace(/<[^>]+>/g, ' ');
+                    });
+                }
+                
+                // Step 3: Extract from article/content sections
+                const articles = htmlContent.match(/<article[^>]*>([\s\S]*?)<\/article>/gi);
+                if (articles) {
+                    articles.forEach(a => {
+                        enhancedContent += ' ' + a.replace(/<[^>]+>/g, ' ');
+                    });
+                }
+                
+                // Step 4: Extract from paragraphs (main readable content)
+                const paragraphs = htmlContent.match(/<p[^>]*>([^<]+)<\/p>/gi);
+                if (paragraphs) {
+                    paragraphs.forEach(p => {
+                        const text = p.replace(/<[^>]+>/g, '').trim();
+                        if (text.length > 10) enhancedContent += ' ' + text + ' ';
+                    });
+                }
+                
+                // Step 5: Extract from list items (often contain key details)
+                const listItems = htmlContent.match(/<li[^>]*>([^<]+)<\/li>/gi);
+                if (listItems) {
+                    listItems.forEach(li => {
+                        const text = li.replace(/<[^>]+>/g, '').trim();
+                        if (text.length > 5) enhancedContent += ' ' + text + ' ';
+                    });
+                }
+                
+                // Step 6: Extract from divs with course/program/details classes
+                const detailDivs = htmlContent.match(/<div[^>]*(?:class|id)=["'][^"']*(?:course|program|detail|info|date|deadline|intake|start|duration|study|mode|location|campus)[^"']*["'][^>]*>([\s\S]{10,500})<\/div>/gi);
+                if (detailDivs) {
+                    detailDivs.forEach(div => {
+                        const text = div.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                        if (text.length > 10) enhancedContent += ' DETAILS: ' + text + ' ';
+                    });
+                }
+                
+                // Step 7: Extract from data attributes (structured data)
+                const dataAttrs = htmlContent.match(/data-[^=]*="([^"]{10,200})"/gi);
+                if (dataAttrs) {
+                    dataAttrs.forEach(attr => {
+                        const match = attr.match(/="([^"]+)"/);
+                        if (match && match[1].length > 5) enhancedContent += ' DATA: ' + match[1] + ' ';
+                    });
+                }
+                
+                // Step 8: Extract from tables (structured information)
+                const tableCells = htmlContent.match(/<t[dh][^>]*>([^<]+)<\/t[dh]>/gi);
+                if (tableCells) {
+                    tableCells.forEach(cell => {
+                        const text = cell.replace(/<[^>]+>/g, '').trim();
+                        if (text.length > 3) enhancedContent += ' TABLE: ' + text + ' ';
+                    });
+                }
+                
+                // Step 9: Extract from spans and labels (often contain key-value pairs)
+                const spans = htmlContent.match(/<span[^>]*>([^<]{5,100})<\/span>/gi);
+                if (spans) {
+                    spans.forEach(span => {
+                        const text = span.replace(/<[^>]+>/g, '').trim();
+                        if (text.length > 5 && !text.match(/^[0-9\s]+$/)) enhancedContent += ' ' + text + ' ';
+                    });
+                }
+                
+                // Step 10: Extract from labels (often contain field names and values)
+                const labels = htmlContent.match(/<label[^>]*>([^<]+)<\/label>/gi);
+                if (labels) {
+                    labels.forEach(label => {
+                        const text = label.replace(/<[^>]+>/g, '').trim();
+                        if (text.length > 3) enhancedContent += ' LABEL: ' + text + ' ';
+                    });
+                }
+                
+                // Enhanced HTML parsing: Extract content from tabs, dropdowns, and hidden elements
                 
                 // Extract content from hidden tabs
                 const hiddenTabContent = htmlContent.match(/<div[^>]*(?:aria-hidden|display:\s*none|hidden|tab-pane|tab-content)[^>]*>([\s\S]*?)<\/div>/gi);
