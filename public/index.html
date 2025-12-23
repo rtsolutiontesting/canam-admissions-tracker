@@ -1659,10 +1659,10 @@ Rules:
                             try {
                                 addStreamLine('info', `[${processedCount}] Processing: ${url.substring(0, 60)}...`);
                                 
-                                // Safety: Add delay between requests to avoid blocking
+                                // Human-like delay: 10 seconds per page as requested (like a human reading)
                                 if (processedCount > 1) {
-                                    const delay = 2000 + Math.random() * 1000; // 2-3 seconds random delay
-                                    await new Promise(resolve => setTimeout(resolve, delay));
+                                    addStreamLine('info', `[${processedCount}] ⏳ Waiting 10 seconds (human-like reading time)...`);
+                                    await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
                                 }
                                 
                                 // USE PROPER BACKEND API - Server-side fetching + AI extraction
