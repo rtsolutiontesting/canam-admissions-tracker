@@ -2602,11 +2602,29 @@ Rules:
                     }
                 }
                 
+                // Extract campus location
+                const campusPatterns = [
+                    /(?:campus|location|located\s+in|address)[\s:]*([^.!?]{0,100}(?:campus|university|college|building|street|avenue|road|city|town)[^.!?]{0,50})/gi,
+                    /([A-Z][a-z]+\s+(?:Campus|University|College|Building|Street|Avenue|Road))/g,
+                    /(?:at|in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:Campus|University|College))/gi
+                ];
+                
+                let campusFound = null;
+                for (const pattern of campusPatterns) {
+                    const matches = cleanContent.match(pattern);
+                    if (matches && matches.length > 0) {
+                        campusFound = matches[0].replace(/(?:campus|location|located\s+in|address|at|in)[\s:]*/gi, '').trim();
+                        if (campusFound && campusFound.length > 3 && campusFound.length < 100) {
+                            result.campusLocation = campusFound;
+                            break;
+                        }
+                    }
+                }
+                
                 // Search for CAS deadline (UK specific)
                 const casPatterns = [
-                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
-                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
-                    /(?:confirmation\s+of\s+acceptance\s+for\s+studies|cas)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi
+                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline|confirmation\s+of\s+acceptance)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline|confirmation\s+of\s+acceptance)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
                 ];
                 
                 for (const pattern of casPatterns) {
@@ -2620,12 +2638,29 @@ Rules:
                     }
                 }
                 
-                // Check for status keywords
-                if (/(?:closed|not\s+accepting|no\s+longer\s+accepting|applications\s+closed)/gi.test(cleanContent)) {
+                // Search for I-20 deadline (USA specific)
+                const i20Patterns = [
+                    /(?:i-20|i20|form\s+i-20|i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:i-20|i20|form\s+i-20|i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
+                ];
+                
+                for (const pattern of i20Patterns) {
+                    const matches = cleanContent.match(pattern);
+                    if (matches && matches.length > 0) {
+                        let i20Deadline = matches[0].replace(/(?:i-20|i20|form\s+i-20|i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*/gi, '').trim();
+                        if (i20Deadline) {
+                            result.i20Deadline = i20Deadline;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check for status keywords (open/closed/waitlist)
+                if (/(?:closed|not\s+accepting|no\s+longer\s+accepting|applications\s+closed|full)/gi.test(cleanContent)) {
                     result.intakeStatus = 'closed';
                 } else if (/(?:waitlist|waiting\s+list|wait\s+list)/gi.test(cleanContent)) {
                     result.intakeStatus = 'waitlist';
-                } else if (/(?:open|accepting|now\s+accepting)/gi.test(cleanContent)) {
+                } else if (/(?:open|accepting|now\s+accepting|currently\s+accepting)/gi.test(cleanContent)) {
                     result.intakeStatus = 'open';
                 }
                 
