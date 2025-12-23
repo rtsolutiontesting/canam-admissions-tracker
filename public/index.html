@@ -601,234 +601,6 @@
         };
     </script>
 
-    <!-- Column Mapping System - Must be before uploadExcelFile -->
-    <script>
-        // Column Mapping System
-        let excelHeaders = [];
-        let columnMapping = {};
-        let excelFileData = null;
-        
-        // Expected target columns
-        const targetColumns = [
-            { key: 'sr', label: 'Sr (Serial Number)', required: false },
-            { key: 'universityName', label: 'University Name', required: true },
-            { key: 'programName', label: 'Program Name', required: true },
-            { key: 'location', label: 'Campus Location', required: false },
-            { key: 'country', label: 'Country', required: false },
-            { key: 'admissionsPageUrl', label: 'Admissions Page URL', required: true },
-            { key: 'intakesAvailable', label: 'Intakes Available', required: false },
-            { key: 'admissionDeadline_found', label: 'Admission Deadline', required: false },
-            { key: 'casSubmissionDeadline_found', label: 'CAS Deadline', required: false },
-            { key: 'i20Deadline_found', label: 'I-20 Deadline', required: false },
-            { key: 'intakeStatus', label: 'Intake Status', required: false },
-            { key: 'remarks', label: 'Remarks/Notes', required: false }
-        ];
-        
-        // Handle file selection
-        window.handleFileSelect = function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                document.getElementById('excelFileName').textContent = file.name;
-                // Parse file to get headers
-                parseExcelHeaders(file);
-            } else {
-                document.getElementById('excelFileName').textContent = 'No file chosen';
-                document.getElementById('mapColumnsButton').style.display = 'none';
-            }
-        };
-        
-        // Parse Excel headers
-        async function parseExcelHeaders(file) {
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-                
-                if (jsonData && jsonData.length > 0) {
-                    excelHeaders = jsonData[0].map((h, idx) => ({
-                        index: idx,
-                        name: (h || '').toString().trim() || `Column ${String.fromCharCode(65 + idx)}`
-                    }));
-                    
-                    // Store file data for later use
-                    excelFileData = { file, jsonData };
-                    
-                    // Auto-detect mappings
-                    autoDetectColumns();
-                    
-                    // Show mapping button
-                    document.getElementById('mapColumnsButton').style.display = 'inline-block';
-                }
-            } catch (error) {
-                console.error('Error parsing Excel headers:', error);
-                alert('Error reading Excel file. Please try again.');
-            }
-        };
-        
-        // Auto-detect column mappings
-        window.autoDetectColumns = function() {
-            columnMapping = {};
-            
-            targetColumns.forEach(target => {
-                const targetLower = target.key.toLowerCase();
-                const targetLabelLower = target.label.toLowerCase();
-                
-                // Try to find matching header
-                for (const header of excelHeaders) {
-                    const headerLower = header.name.toLowerCase();
-                    
-                    // Exact match
-                    if (headerLower === targetLower || headerLower === targetLabelLower) {
-                        columnMapping[target.key] = header.index;
-                        break;
-                    }
-                    
-                    // Partial match
-                    const keywords = {
-                        'universityname': ['university', 'uni', 'college', 'institution'],
-                        'programname': ['program', 'course', 'degree', 'major'],
-                        'location': ['location', 'campus', 'city', 'address'],
-                        'country': ['country', 'nation'],
-                        'admissionspageurl': ['url', 'link', 'admission', 'page', 'website'],
-                        'intakesavailable': ['intake', 'start', 'term', 'semester'],
-                        'admissiondeadline_found': ['deadline', 'application', 'admission', 'close'],
-                        'cassubmissiondeadline_found': ['cas', 'confirmation'],
-                        'i20deadline_found': ['i-20', 'i20', 'visa'],
-                        'intakestatus': ['status', 'open', 'closed'],
-                        'remarks': ['remark', 'note', 'comment', 'alert']
-                    };
-                    
-                    if (keywords[targetLower]) {
-                        for (const keyword of keywords[targetLower]) {
-                            if (headerLower.includes(keyword)) {
-                                columnMapping[target.key] = header.index;
-                                break;
-                            }
-                        }
-                        if (columnMapping[target.key]) break;
-                    }
-                }
-            });
-            
-            renderColumnMapping();
-        };
-        
-        // Render column mapping UI
-        function renderColumnMapping() {
-            const container = document.getElementById('columnMappingContainer');
-            if (!container) return;
-            
-            container.innerHTML = '';
-            
-            const table = document.createElement('table');
-            table.style.width = '100%';
-            table.style.borderCollapse = 'collapse';
-            table.style.fontSize = '13px';
-            
-            // Header
-            const headerRow = document.createElement('tr');
-            headerRow.style.backgroundColor = '#f5f5f5';
-            headerRow.innerHTML = `
-                <th style="padding: 10px; text-align: left; border: 1px solid #ddd; width: 30%;">Expected Field</th>
-                <th style="padding: 10px; text-align: left; border: 1px solid #ddd; width: 10%;">Required</th>
-                <th style="padding: 10px; text-align: left; border: 1px solid #ddd; width: 60%;">Map to Excel Column</th>
-            `;
-            table.appendChild(headerRow);
-            
-            // Rows
-            targetColumns.forEach(target => {
-                const row = document.createElement('tr');
-                const isMapped = columnMapping[target.key] !== undefined;
-                const mappedHeader = isMapped ? excelHeaders[columnMapping[target.key]].name : '';
-                
-                row.innerHTML = `
-                    <td style="padding: 10px; border: 1px solid #ddd;">
-                        <strong>${target.label}</strong><br>
-                        <small style="color: #666;">${target.key}</small>
-                    </td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
-                        ${target.required ? '<span style="color: #f44336;">●</span>' : '<span style="color: #999;">○</span>'}
-                    </td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">
-                        <select id="map_${target.key}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" onchange="updateMapping('${target.key}', this.value)">
-                            <option value="">-- Select Column --</option>
-                            ${excelHeaders.map((h, idx) => `
-                                <option value="${idx}" ${columnMapping[target.key] === idx ? 'selected' : ''}>
-                                    Column ${idx + 1}: ${h.name}
-                                </option>
-                            `).join('')}
-                        </select>
-                        ${isMapped ? `<small style="color: #4caf50; display: block; margin-top: 4px;">✓ Mapped to: "${mappedHeader}"</small>` : target.required ? `<small style="color: #f44336; display: block; margin-top: 4px;">⚠ Required field</small>` : ''}
-                    </td>
-                `;
-                table.appendChild(row);
-            });
-            
-            container.appendChild(table);
-        };
-        
-        // Update mapping
-        window.updateMapping = function(targetKey, sourceIndex) {
-            if (sourceIndex === '' || sourceIndex === null) {
-                delete columnMapping[targetKey];
-            } else {
-                columnMapping[targetKey] = parseInt(sourceIndex);
-            }
-            renderColumnMapping();
-        };
-        
-        // Reset mapping
-        window.resetColumnMapping = function() {
-            columnMapping = {};
-            renderColumnMapping();
-        };
-        
-        // Save mapping
-        window.saveColumnMapping = function() {
-            // Validate required fields
-            const missingRequired = targetColumns.filter(t => t.required && !columnMapping[t.key]);
-            if (missingRequired.length > 0) {
-                alert(`Please map all required fields:\n${missingRequired.map(t => t.label).join('\n')}`);
-                return;
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('excelColumnMapping', JSON.stringify(columnMapping));
-            localStorage.setItem('excelHeaders', JSON.stringify(excelHeaders));
-            
-            alert('Column mapping saved successfully! You can now upload the file.');
-            closeColumnMapping();
-        };
-        
-        // Show column mapping modal
-        window.showColumnMapping = function() {
-            if (excelHeaders.length === 0) {
-                alert('Please select an Excel file first.');
-                return;
-            }
-            
-            // Load saved mapping if exists
-            const savedMapping = localStorage.getItem('excelColumnMapping');
-            if (savedMapping) {
-                try {
-                    columnMapping = JSON.parse(savedMapping);
-                } catch (e) {
-                    columnMapping = {};
-                }
-            }
-            
-            renderColumnMapping();
-            document.getElementById('columnMappingModal').classList.add('active');
-        };
-        
-        // Close column mapping modal
-        window.closeColumnMapping = function() {
-            document.getElementById('columnMappingModal').classList.remove('active');
-        };
-    </script>
-
     <!-- Upload Excel File Function - Must be global for onclick handler -->
     <script>
         // Upload and process Excel file - Global function for onclick handler
@@ -885,23 +657,6 @@
                 updateProgressFn(50, 'Processing data...');
                 addStreamLineFn('success', `✅ Excel file parsed! Found ${jsonData.length} rows`);
                 addStreamLineFn('info', `Sheet name: ${firstSheetName}`);
-
-                // Load column mapping if exists
-                const savedMapping = localStorage.getItem('excelColumnMapping');
-                if (savedMapping) {
-                    try {
-                        const mapping = JSON.parse(savedMapping);
-                        // Store mapping for processSheetData to use
-                        window.excelColumnMapping = mapping;
-                        addStreamLineFn('info', `Using saved column mapping for ${Object.keys(mapping).length} fields`);
-                    } catch (e) {
-                        console.error('Error loading column mapping:', e);
-                    }
-                } else {
-                    // Clear any previous mapping
-                    window.excelColumnMapping = null;
-                    addStreamLineFn('info', 'No column mapping found. Using auto-detection.');
-                }
 
                 // Process data using shared function (will be called from module script)
                 // We need to call the processSheetData function from the module scope
@@ -1488,48 +1243,28 @@ Rules:
             const headers = nonEmptyRows[0].map(h => (h || '').toString().trim().toLowerCase());
             addStreamLine('info', `Headers: ${headers.slice(0, 5).join(', ')}${headers.length > 5 ? '...' : ''}`);
 
-            // Use column mapping if available (for Excel files)
-            let universityIdx, programIdx, countryIdx, locationIdx, urlIdx, statusIdx, deadlineIdx, intakeOfferedIdx, casDeadlineIdx, i20DeadlineIdx, alertsIdx;
-            
-            if (source === 'excel' && window.excelColumnMapping) {
-                // Use saved column mapping
-                universityIdx = window.excelColumnMapping.universityName !== undefined ? window.excelColumnMapping.universityName : -1;
-                programIdx = window.excelColumnMapping.programName !== undefined ? window.excelColumnMapping.programName : -1;
-                countryIdx = window.excelColumnMapping.country !== undefined ? window.excelColumnMapping.country : -1;
-                locationIdx = window.excelColumnMapping.location !== undefined ? window.excelColumnMapping.location : -1;
-                urlIdx = window.excelColumnMapping.admissionsPageUrl !== undefined ? window.excelColumnMapping.admissionsPageUrl : -1;
-                statusIdx = window.excelColumnMapping.intakeStatus !== undefined ? window.excelColumnMapping.intakeStatus : -1;
-                deadlineIdx = window.excelColumnMapping.admissionDeadline_found !== undefined ? window.excelColumnMapping.admissionDeadline_found : -1;
-                intakeOfferedIdx = window.excelColumnMapping.intakesAvailable !== undefined ? window.excelColumnMapping.intakesAvailable : -1;
-                casDeadlineIdx = window.excelColumnMapping.casSubmissionDeadline_found !== undefined ? window.excelColumnMapping.casSubmissionDeadline_found : -1;
-                i20DeadlineIdx = window.excelColumnMapping.i20Deadline_found !== undefined ? window.excelColumnMapping.i20Deadline_found : -1;
-                alertsIdx = window.excelColumnMapping.remarks !== undefined ? window.excelColumnMapping.remarks : -1;
-                
-                addStreamLine('info', `Using custom column mapping: University=${universityIdx}, Program=${programIdx}, URL=${urlIdx}`);
-            } else {
-                // Auto-detect columns (fallback for Google Sheets or unmapped Excel)
-                const getColumnIndex = (searchTerms) => {
-                    for (const term of searchTerms) {
-                        const idx = headers.findIndex(h => h.includes(term));
-                        if (idx >= 0) return idx;
-                    }
-                    return -1;
-                };
+            // Auto-detect columns (for both Google Sheets and Excel)
+            const getColumnIndex = (searchTerms) => {
+                for (const term of searchTerms) {
+                    const idx = headers.findIndex(h => h.includes(term));
+                    if (idx >= 0) return idx;
+                }
+                return -1;
+            };
 
-                universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
-                programIdx = getColumnIndex(['programname', 'program', 'program name']);
-                countryIdx = getColumnIndex(['country']);
-                locationIdx = getColumnIndex(['location', 'campus', 'campus location']);
-                urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
-                statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
-                deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
-                intakeOfferedIdx = getColumnIndex(['intake', 'intake offered', 'intakeoffered']);
-                casDeadlineIdx = getColumnIndex(['cas', 'cas deadline', 'casdeadline']);
-                i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline', 'i20deadline']);
-                alertsIdx = getColumnIndex(['alert', 'note', 'admission alert', 'admissionalerts', 'notes']);
-                
-                addStreamLine('info', `Auto-detected columns: University=${universityIdx}, Program=${programIdx}, URL=${urlIdx}`);
-            }
+            const universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
+            const programIdx = getColumnIndex(['programname', 'program', 'program name']);
+            const countryIdx = getColumnIndex(['country']);
+            const locationIdx = getColumnIndex(['location', 'campus', 'campus location']);
+            const urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
+            const statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
+            const deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
+            const intakeOfferedIdx = getColumnIndex(['intake', 'intake offered', 'intakeoffered']);
+            const casDeadlineIdx = getColumnIndex(['cas', 'cas deadline', 'casdeadline']);
+            const i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline', 'i20deadline']);
+            const alertsIdx = getColumnIndex(['alert', 'note', 'admission alert', 'admissionalerts', 'notes']);
+            
+            addStreamLine('info', `Auto-detected columns: University=${universityIdx}, Program=${programIdx}, URL=${urlIdx}`);
             
             addStreamLine('info', `Column indices - University: ${universityIdx}, Program: ${programIdx}, Country: ${countryIdx}, URL: ${urlIdx}`);
 
