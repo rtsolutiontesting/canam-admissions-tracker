@@ -99,13 +99,87 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Step 2: Clean HTML (remove scripts, styles, limit size)
-    const cleanHtml = htmlContent
+    // Step 2: Extract ALL visible text like a human would read it
+    // First, create a virtual DOM parser to extract visible text properly
+    let visibleText = '';
+    
+    // Method 1: Extract text from common content containers (like a human scanning the page)
+    const contentSelectors = [
+      'main', 'article', '.content', '.main-content', '.page-content',
+      '.course-details', '.program-info', '.admission-info', '.intake-info',
+      '[role="main"]', '.details', '.info', '.course-info', '.program-details'
+    ];
+    
+    // Extract text from these containers
+    for (const selector of contentSelectors) {
+      const regex = new RegExp(`<[^>]*class=["'][^"']*${selector.replace('.', '')}[^"']*["'][^>]*>([\\s\\S]*?)<\\/[^>]+>`, 'gi');
+      const matches = htmlContent.match(regex);
+      if (matches) {
+        matches.forEach(match => {
+          const text = match.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (text.length > 20) {
+            visibleText += ' ' + text;
+          }
+        });
+      }
+    }
+    
+    // Method 2: Extract all text content (human-like reading)
+    // Remove scripts, styles, but keep structure to understand context
+    let structuredText = htmlContent
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
       .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ');
+    
+    // Extract text from headings (h1-h6) - humans read these first
+    const headings = structuredText.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi);
+    if (headings) {
+      headings.forEach(h => {
+        const text = h.replace(/<[^>]+>/g, '').trim();
+        if (text.length > 3) visibleText += ' HEADING: ' + text + ' ';
+      });
+    }
+    
+    // Extract text from paragraphs - main content
+    const paragraphs = structuredText.match(/<p[^>]*>([^<]+)<\/p>/gi);
+    if (paragraphs) {
+      paragraphs.forEach(p => {
+        const text = p.replace(/<[^>]+>/g, '').trim();
+        if (text.length > 10) visibleText += ' ' + text + ' ';
+      });
+    }
+    
+    // Extract text from list items - often contain key info
+    const listItems = structuredText.match(/<li[^>]*>([^<]+)<\/li>/gi);
+    if (listItems) {
+      listItems.forEach(li => {
+        const text = li.replace(/<[^>]+>/g, '').trim();
+        if (text.length > 5) visibleText += ' ' + text + ' ';
+      });
+    }
+    
+    // Extract text from divs with data attributes or specific classes
+    const dataDivs = structuredText.match(/<div[^>]*(?:data-[^=]*=|class=["'][^"']*(?:detail|info|date|deadline|intake|start|duration|study|mode)[^"']*["'])[^>]*>([\s\S]{10,200})<\/div>/gi);
+    if (dataDivs) {
+      dataDivs.forEach(div => {
+        const text = div.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (text.length > 10) visibleText += ' ' + text + ' ';
+      });
+    }
+    
+    // Extract all remaining visible text (strip HTML tags)
+    const allText = structuredText.replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
-      .substring(0, 50000); // Limit to 50KB for AI API
+      .trim();
+    
+    // Combine all extracted text
+    visibleText = (visibleText + ' ' + allText)
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Limit to 80KB for AI (increased from 50KB to capture more content)
+    const cleanHtml = visibleText.substring(0, 80000);
 
     // Step 3: Extract data using AI
     let extractedData;

@@ -2544,12 +2544,18 @@ Rules:
                     .replace(/\s+/g, ' ')
                     .toLowerCase();
                 
-                // Extract intakes available
+                // Extract intakes available - HUMAN-LIKE: Look for "Next start date", "Future start date", "Start date", etc.
                 const intakePatterns = [
-                    /(?:intake|intakes|available|offered)[\s:]*([^.!?]{0,200}(?:september|october|november|december|january|february|march|april|may|june|july|august|fall|spring|summer|winter|autumn|2024|2025|2026)[^.!?]{0,100})/gi,
-                    /(?:september|october|november|december|january|february|march|april|may|june|july|august|fall|spring|summer|winter|autumn)\s+\d{4}/gi,
-                    /\d{4}[\/\-]\d{2,4}/g,
-                    /(?:intake|intakes)[\s:]*([a-z0-9\s,]+(?:and|&)[a-z0-9\s,]+)/gi
+                    // "Next start date: Jan 2026" or "Future start date: Jan 2026"
+                    /(?:next\s+start\s+date|future\s+start\s+date|start\s+date|intake\s+date|course\s+start)[\s:]*([^.!?\n]{0,100}(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december|fall|spring|summer|winter|autumn)[^.!?\n]{0,50}\s*\d{4})/gi,
+                    // "Jan 2026", "January 2026", "Fall 2024"
+                    /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december|fall|spring|summer|winter|autumn)[a-z]*\s+\d{4}/gi,
+                    // "2026/01", "2024-09", "2024/25"
+                    /\d{4}[\/\-]\d{1,4}/g,
+                    // "intake: September 2024" or "available: Fall 2024"
+                    /(?:intake|intakes|available|offered|start)[\s:]*([^.!?\n]{0,200}(?:september|october|november|december|january|february|march|april|may|june|july|august|fall|spring|summer|winter|autumn|2024|2025|2026)[^.!?\n]{0,100})/gi,
+                    // Multiple intakes: "Fall 2024, Spring 2025"
+                    /(?:intake|intakes)[\s:]*([a-z0-9\s,]+(?:and|&|,)[a-z0-9\s,]+)/gi
                 ];
                 
                 let intakesFound = [];
