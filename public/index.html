@@ -961,8 +961,6 @@
 
             } catch (error) {
                 console.error('Excel upload error:', error);
-                const addStreamLineFn = window.addStreamLine || (() => {});
-                const updateProgressFn = window.updateProgress || (() => {});
                 addStreamLineFn('error', `Excel upload failed: ${error.message}`);
                 alert(`Failed to upload Excel file: ${error.message}`);
                 updateProgressFn(0, 'Upload failed');
