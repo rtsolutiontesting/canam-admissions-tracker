@@ -413,43 +413,81 @@
         
         // Load AI configuration from localStorage
         function loadAIConfig() {
-            aiProvider = localStorage.getItem('aiProvider') || 'gemini';
-            geminiApiKey = localStorage.getItem('geminiApiKey');
-            openaiApiKey = localStorage.getItem('openaiApiKey');
-            updateAIStatus();
+            try {
+                aiProvider = localStorage.getItem('aiProvider') || 'gemini';
+                geminiApiKey = localStorage.getItem('geminiApiKey') || null;
+                openaiApiKey = localStorage.getItem('openaiApiKey') || null;
+                updateAIStatus();
+                console.log('AI Config loaded:', { aiProvider, hasGeminiKey: !!geminiApiKey, hasOpenAIKey: !!openaiApiKey });
+            } catch (error) {
+                console.error('Error loading AI config:', error);
+            }
         }
         
         // Save AI configuration
-        function saveAIAgentConfig() {
-            const geminiKey = document.getElementById('geminiApiKey').value.trim();
-            const openaiKey = document.getElementById('openaiApiKey').value.trim();
-            
-            if (aiProvider === 'gemini' && !geminiKey) {
-                alert('Please enter your Gemini API key');
-                return;
+        window.saveAIAgentConfig = function() {
+            try {
+                const geminiInput = document.getElementById('geminiApiKey');
+                const openaiInput = document.getElementById('openaiApiKey');
+                
+                if (!geminiInput || !openaiInput) {
+                    alert('Error: Could not find API key input fields');
+                    return;
+                }
+                
+                const geminiKey = geminiInput.value.trim();
+                const openaiKey = openaiInput.value.trim();
+                
+                if (aiProvider === 'gemini' && !geminiKey) {
+                    alert('Please enter your Gemini API key');
+                    return;
+                }
+                if (aiProvider === 'openai' && !openaiKey) {
+                    alert('Please enter your OpenAI API key');
+                    return;
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('aiProvider', aiProvider);
+                if (geminiKey) {
+                    localStorage.setItem('geminiApiKey', geminiKey);
+                } else {
+                    localStorage.removeItem('geminiApiKey');
+                }
+                if (openaiKey) {
+                    localStorage.setItem('openaiApiKey', openaiKey);
+                } else {
+                    localStorage.removeItem('openaiApiKey');
+                }
+                
+                // Update variables
+                geminiApiKey = geminiKey || null;
+                openaiApiKey = openaiKey || null;
+                
+                console.log('AI Config saved:', { aiProvider, hasGeminiKey: !!geminiApiKey, hasOpenAIKey: !!openaiApiKey });
+                
+                updateAIStatus();
+                addStreamLine('success', `✅ AI Agent configuration saved successfully! Using ${aiProvider === 'gemini' ? 'Google Gemini' : 'OpenAI'}`);
+                closeAIAgentConfig();
+            } catch (error) {
+                console.error('Error saving AI config:', error);
+                alert('Error saving configuration: ' + error.message);
             }
-            if (aiProvider === 'openai' && !openaiKey) {
-                alert('Please enter your OpenAI API key');
-                return;
-            }
-            
-            localStorage.setItem('aiProvider', aiProvider);
-            if (geminiKey) localStorage.setItem('geminiApiKey', geminiKey);
-            if (openaiKey) localStorage.setItem('openaiApiKey', openaiKey);
-            
-            geminiApiKey = geminiKey || null;
-            openaiApiKey = openaiKey || null;
-            
-            updateAIStatus();
-            addStreamLine('success', '✅ AI Agent configuration saved successfully!');
-            closeAIAgentConfig();
         }
         
         // Show AI Agent configuration modal
         window.showAIAgentConfig = function() {
+            // Reload config from localStorage to ensure we have latest values
+            loadAIConfig();
             const modal = document.getElementById('aiAgentModal');
-            document.getElementById('geminiApiKey').value = geminiApiKey || '';
-            document.getElementById('openaiApiKey').value = openaiApiKey || '';
+            if (!modal) {
+                console.error('AI Agent modal not found');
+                return;
+            }
+            const geminiInput = document.getElementById('geminiApiKey');
+            const openaiInput = document.getElementById('openaiApiKey');
+            if (geminiInput) geminiInput.value = geminiApiKey || '';
+            if (openaiInput) openaiInput.value = openaiApiKey || '';
             selectProvider(aiProvider);
             modal.classList.add('active');
         }
