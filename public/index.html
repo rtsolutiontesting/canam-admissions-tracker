@@ -2019,7 +2019,9 @@ Rules:
                                     const agentName = config.aiProvider === 'gemini' ? 'Gemini 1.5 Flash' : 'OpenAI GPT-4';
                                     // Use backend API for proper extraction (server-side, no CORS)
                                     addStreamLine('info', `[${processedCount}] 🤖 Using backend API with AI extraction (${agentName})...`);
-                                    updateAIProgress(agentName, 0, 0); // Initialize AI progress
+                                    // Initialize AI progress with proper token limits
+                                    const defaultTokenLimit = config.aiProvider === 'gemini' ? 1000000 : 100000; // Gemini has higher limits
+                                    updateAIProgress(agentName, 0, defaultTokenLimit);
                                     try {
                                         const apiResponse = await fetch('/api/extract', {
                                             method: 'POST',
@@ -2152,7 +2154,21 @@ Rules:
                                         
                                         continue; // Skip to next program
                                     } catch (apiError) {
-                                        addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
+                                        // Track AI usage even on failure (request was attempted)
+                                        const errorTokens = 500; // Estimate tokens used before error
+                                        updateAIProgress(agentName, errorTokens, 0);
+                                        
+                                        syncStats.errorMessages++;
+                                        updateStat('statErrorMessages', syncStats.errorMessages);
+                                        
+                                        // Check if rate limited
+                                        if (apiError.message.includes('429') || apiError.message.includes('rate limit') || apiError.message.includes('Rate limit')) {
+                                            syncStats.urlsBlocked++;
+                                            updateStat('statUrlsBlocked', syncStats.urlsBlocked);
+                                            addStreamLine('warning', `[${processedCount}] ⚠️ AI Rate limit reached. Will try pattern matching and AI fallback...`);
+                                        } else {
+                                            addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
+                                        }
                                         // Fall through to pattern matching below
                                     }
                                 } else {
