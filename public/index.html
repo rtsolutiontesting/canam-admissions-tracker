@@ -667,8 +667,9 @@
                 // Mark as loaded
                 sheetDataLoaded = true;
                 currentSpreadsheetId = `excel_${fileName}`;
-                if (typeof updateButtonStates === 'function') {
-                    updateButtonStates();
+                // Use window function (exposed from module script)
+                if (typeof window.updateButtonStates === 'function') {
+                    window.updateButtonStates();
                 }
 
                 updateProgressFn(100, `✅ Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel`);
