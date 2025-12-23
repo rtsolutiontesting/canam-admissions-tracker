@@ -662,6 +662,9 @@
                 tbody.innerHTML = html;
                 sheetDataLoaded = true;
                 currentSpreadsheetId = spreadsheetId;
+                // Step 2 is now hidden (Google Drive auth is Step 0)
+                // Enable Step 3 (Sync Now)
+                updateButtonStates();
 
                 // Enable Step 2
                 authButton.disabled = false;
