@@ -600,7 +600,95 @@
             updateAIStatusGlobal();
         };
     </script>
-    
+
+    <!-- Upload Excel File Function - Must be global for onclick handler -->
+    <script>
+        // Upload and process Excel file - Global function for onclick handler
+        window.uploadExcelFile = async function() {
+            const fileInput = document.getElementById('excelFileInput');
+            const uploadButton = document.getElementById('uploadExcelButton');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const tbody = document.getElementById('dataTableBody');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select an Excel file to upload');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileName = file.name;
+
+            try {
+                uploadButton.disabled = true;
+                progressContainer.style.display = 'block';
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 20px;">Loading data...</td></tr>';
+
+                updateProgress(10, 'Reading Excel file...');
+                addStreamLine('info', `Uploading file: ${fileName}`);
+
+                // Read file as ArrayBuffer
+                const arrayBuffer = await file.arrayBuffer();
+                updateProgress(30, 'Parsing Excel data...');
+                addStreamLine('info', 'Parsing Excel file...');
+
+                // Check if XLSX library is loaded
+                if (typeof XLSX === 'undefined') {
+                    throw new Error('Excel parser library not loaded. Please refresh the page.');
+                }
+
+                // Parse Excel file using SheetJS
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convert to JSON array (array of arrays)
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                
+                if (!jsonData || jsonData.length === 0) {
+                    throw new Error('Excel file is empty or could not be parsed');
+                }
+
+                updateProgress(50, 'Processing data...');
+                addStreamLine('success', `✅ Excel file parsed! Found ${jsonData.length} rows`);
+                addStreamLine('info', `Sheet name: ${firstSheetName}`);
+
+                // Process data using shared function (will be called from module script)
+                // We need to call the processSheetData function from the module scope
+                if (typeof window.processSheetData === 'function') {
+                    await window.processSheetData(jsonData, 'excel');
+                } else {
+                    // Fallback: basic processing
+                    addStreamLine('warning', 'Advanced processing not available. Using basic mode.');
+                    // Basic processing will be handled by the module script
+                }
+
+                // Mark as loaded
+                sheetDataLoaded = true;
+                currentSpreadsheetId = `excel_${fileName}`;
+                if (typeof updateButtonStates === 'function') {
+                    updateButtonStates();
+                }
+
+                updateProgress(100, `✅ Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel`);
+                addStreamLine('success', `✅ Step 1 Complete: Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel file`);
+                addStreamLine('info', 'You can now proceed to Step 3: Sync Now');
+
+            } catch (error) {
+                console.error('Excel upload error:', error);
+                addStreamLine('error', `Excel upload failed: ${error.message}`);
+                alert(`Failed to upload Excel file: ${error.message}`);
+                updateProgress(0, 'Upload failed');
+            } finally {
+                uploadButton.disabled = false;
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.style.display = 'none';
+                }, 3000);
+            }
+        };
+    </script>
+
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
