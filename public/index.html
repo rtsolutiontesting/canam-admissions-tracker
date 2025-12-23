@@ -668,9 +668,14 @@
                     // Basic processing will be handled by the module script
                 }
 
-                // Mark as loaded - update window references (module variables are updated by processSheetData)
+                // Mark as loaded - update both module and window references
+                // The processSheetData function should have already set sheetDataLoaded, but ensure it's set
                 if (window.sheetDataLoaded !== undefined) {
                     window.sheetDataLoaded = true;
+                }
+                // Also update the module variable directly if accessible
+                if (typeof window.setSheetDataLoaded === 'function') {
+                    window.setSheetDataLoaded(true);
                 }
                 if (window.currentSpreadsheetId !== undefined) {
                     window.currentSpreadsheetId = `excel_${fileName}`;
@@ -678,6 +683,13 @@
                 // Use window function (exposed from module script)
                 if (typeof window.updateButtonStates === 'function') {
                     window.updateButtonStates();
+                }
+                
+                // Double-check sync button is enabled
+                const syncButton = document.getElementById('syncButton');
+                if (syncButton && window.programDataStore && window.programDataStore.length > 0) {
+                    syncButton.disabled = false;
+                    addStreamLineFn('info', 'Sync Now button enabled. Ready to sync!');
                 }
 
                 // Access programDataStore from window (exposed from module script)
