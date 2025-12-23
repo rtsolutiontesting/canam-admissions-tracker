@@ -1174,87 +1174,12 @@ Rules:
             }
         }
 
-        // Upload and process Excel file
-        window.uploadExcelFile = async function() {
-            const fileInput = document.getElementById('excelFileInput');
-            const uploadButton = document.getElementById('uploadExcelButton');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            const tbody = document.getElementById('dataTableBody');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please select an Excel file to upload');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            const fileName = file.name;
-
-            try {
-                uploadButton.disabled = true;
-                progressContainer.style.display = 'block';
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading data...</td></tr>';
-
-                updateProgress(10, 'Reading Excel file...');
-                addStreamLine('info', `Uploading file: ${fileName}`);
-
-                // Read file as ArrayBuffer
-                const arrayBuffer = await file.arrayBuffer();
-                updateProgress(30, 'Parsing Excel data...');
-                addStreamLine('info', 'Parsing Excel file...');
-
-                // Check if XLSX library is loaded
-                if (typeof XLSX === 'undefined') {
-                    throw new Error('Excel parser library not loaded. Please refresh the page.');
-                }
-
-                // Parse Excel file using SheetJS
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Convert to JSON array (array of arrays)
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-                
-                if (!jsonData || jsonData.length === 0) {
-                    throw new Error('Excel file is empty or could not be parsed');
-                }
-
-                updateProgress(50, 'Processing data...');
-                addStreamLine('success', `✅ Excel file parsed! Found ${jsonData.length} rows`);
-                addStreamLine('info', `Sheet name: ${firstSheetName}`);
-
-                // Process data using shared function
-                await processSheetData(jsonData, 'excel');
-
-                // Mark as loaded
-                sheetDataLoaded = true;
-                currentSpreadsheetId = `excel_${fileName}`;
-                updateButtonStates();
-
-                updateProgress(100, `✅ Loaded ${programDataStore.length} programs from Excel`);
-                addStreamLine('success', `✅ Step 1 Complete: Loaded ${programDataStore.length} programs from Excel file`);
-                addStreamLine('info', `File: ${fileName}`);
-
-                // Reset file input
-                fileInput.value = '';
-                uploadButton.disabled = false;
-                setTimeout(() => {
-                    progressContainer.style.display = 'none';
-                }, 2000);
-
-            } catch (error) {
-                console.error('Excel upload error:', error);
-                addStreamLine('error', `Failed to process Excel file: ${error.message}`);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #f44336;">Error: ${error.message}</td></tr>`;
-                uploadButton.disabled = false;
-                progressContainer.style.display = 'none';
-            }
-        };
+        // uploadExcelFile is now defined in global script above (line 607)
+        // This duplicate is removed to avoid conflicts
 
         // Process sheet data (works for both Google Sheets and Excel)
-        async function processSheetData(rows, source = 'google') {
+        // Expose to window for global script access
+        window.processSheetData = async function processSheetData(rows, source = 'google') {
             const tbody = document.getElementById('dataTableBody');
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
