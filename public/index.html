@@ -2027,7 +2027,11 @@ Rules:
         }
         // Step 3: Sync Now (process and update data)
         window.runManualSync = async function() {
-            if (!sheetDataLoaded || !programDataStore || programDataStore.length === 0) {
+            // Check both module variable and window property
+            const isDataLoaded = sheetDataLoaded || (window.sheetDataLoaded === true);
+            const hasPrograms = (programDataStore && programDataStore.length > 0) || (window.programDataStore && window.programDataStore.length > 0);
+            
+            if (!isDataLoaded || !hasPrograms) {
                 alert('Please complete Step 1 first: Load Data from Sheet or Upload Excel File');
                 return;
             }
