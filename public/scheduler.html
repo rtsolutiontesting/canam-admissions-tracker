@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduler - CANAM IAPPLY</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; overflow-x: hidden; height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; background: #f5f5f5; }
+        
+        /* Top Navigation Bar */
+        .top-navbar { background: #1e3a5f; color: white; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; height: 70px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000; width: 100%; }
+        .navbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+        .navbar-logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; white-space: nowrap; }
+        .navbar-nav { display: flex; gap: 0; flex-wrap: nowrap; }
+        .nav-item { padding: 0 12px; height: 70px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; border-bottom: 3px solid transparent; white-space: nowrap; font-size: 14px; }
+        .nav-item:hover { background: rgba(255,255,255,0.1); }
+        .nav-item.active { background: rgba(255,255,255,0.1); border-bottom-color: white; }
+        .navbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .user-profile-compact { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 36px; height: 36px; background: white; color: #1e3a5f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .user-info-compact { display: flex; flex-direction: column; }
+        .user-email { font-size: 12px; font-weight: 600; }
+        .user-role { font-size: 10px; color: rgba(255,255,255,0.7); }
+        .logout-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 12px; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; }
+        .logout-link:hover { background: rgba(255,255,255,0.1); color: white; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+        .content-area { padding: 20px; width: 100%; max-width: 100%; overflow-x: hidden; }
+        .dashboard-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #333; }
+        .card { background: white; border-radius: 8px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 8px; display: block; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-input:focus { outline: none; border-color: #2196f3; }
+        .form-select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: white; cursor: pointer; }
+        .form-select:focus { outline: none; border-color: #2196f3; }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
+        
+        .button-primary { padding: 12px 24px; background: #1e3a5f; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .button-primary:hover { background: #2a4d7a; }
+        .button-primary:disabled { background: #ccc; cursor: not-allowed; }
+        .button-secondary { padding: 12px 24px; background: #666; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .button-secondary:hover { background: #555; }
+        
+        .scheduled-jobs { margin-top: 30px; }
+        .job-item { padding: 15px; background: #f8f9fa; border-left: 4px solid #2196f3; border-radius: 4px; margin-bottom: 15px; }
+        .job-item.active { border-left-color: #4caf50; }
+        .job-item.paused { border-left-color: #ff9800; }
+        .job-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .job-title { font-weight: 600; color: #333; font-size: 14px; }
+        .job-status { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .job-status.active { background: #e8f5e9; color: #2e7d32; }
+        .job-status.paused { background: #fff3e0; color: #e65100; }
+        .job-details { font-size: 12px; color: #666; margin-top: 8px; }
+        .job-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .button-small { padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .button-small.edit { background: #2196f3; color: white; }
+        .button-small.delete { background: #f44336; color: white; }
+        .button-small.pause { background: #ff9800; color: white; }
+        .button-small.resume { background: #4caf50; color: white; }
+        
+        .info-box { padding: 15px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; margin-bottom: 20px; font-size: 12px; color: #1976d2; }
+        .success-message { padding: 12px; background: #e8f5e9; border: 1px solid #4caf50; border-radius: 4px; margin-bottom: 20px; color: #2e7d32; font-size: 13px; }
+        .error-message { padding: 12px; background: #ffebee; border: 1px solid #f44336; border-radius: 4px; margin-bottom: 20px; color: #c62828; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="top-navbar">
+        <div class="navbar-left">
+            <div class="navbar-logo">
+                <div class="navbar-logo-icon" style="width: 28px; height: 28px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #1e3a5f; flex-shrink: 0;">🏛️</div>
+                <span>CANAM IAPPLY</span>
+            </div>
+            <div class="navbar-nav">
+                <div class="nav-item" onclick="window.location.href='/index.html'">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item active">
+                    <span class="nav-icon">⏰</span>
+                    <span>Scheduler</span>
+                </div>
+                <div class="nav-item" onclick="showAIAgentConfig()">
+                    <span class="nav-icon">🤖</span>
+                    <span>Use AI Agent</span>
+                </div>
+            </div>
+        </div>
+        <div class="navbar-right">
+            <div class="user-profile-compact">
+                <div class="user-avatar" id="userAvatar">A</div>
+                <div class="user-info-compact">
+                    <div class="user-email" id="userEmail">admin@canamiapply.com</div>
+                    <div class="user-role">ADMIN</div>
+                </div>
+            </div>
+            <a href="#" class="logout-link" onclick="logout(); return false;">Logout</a>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="content-area">
+            <div class="dashboard-title">Scheduler</div>
+            
+            <div class="card">
+                <div class="card-title">Create New Schedule</div>
+                <div id="messageContainer"></div>
+                
+                <form id="scheduleForm">
+                    <div class="form-group">
+                        <label class="form-label">Google Sheet URL *</label>
+                        <input type="text" class="form-input" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required>
+                        <div style="font-size: 11px; color: #999; margin-top: 4px;">Enter the full Google Sheet URL</div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" class="form-input" id="startDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" class="form-input" id="endDate" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Schedule Frequency *</label>
+                        <select class="form-select" id="frequency" required>
+                            <option value="">Select frequency</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom (Cron Expression)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="customCronGroup" style="display: none;">
+                        <label class="form-label">Cron Expression</label>
+                        <input type="text" class="form-input" id="customCron" placeholder="0 9 * * * (9 AM daily)">
+                        <div style="font-size: 11px; color: #999; margin-top: 4px;">Format: minute hour day month weekday (e.g., "0 9 * * *" = 9 AM daily)</div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Time (24-hour format) *</label>
+                            <input type="time" class="form-input" id="scheduleTime" value="09:00" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Timezone</label>
+                            <select class="form-select" id="timezone">
+                                <option value="UTC">UTC</option>
+                                <option value="America/New_York">Eastern Time (ET)</option>
+                                <option value="America/Chicago">Central Time (CT)</option>
+                                <option value="America/Denver">Mountain Time (MT)</option>
+                                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                <option value="Europe/London">London (GMT)</option>
+                                <option value="Asia/Kolkata">India (IST)</option>
+                                <option value="Asia/Dubai">Dubai (GST)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Outcome Logs File Location</label>
+                        <input type="text" class="form-input" id="logLocation" placeholder="/logs/admissions-tracker/ or Google Drive folder URL">
+                        <div style="font-size: 11px; color: #999; margin-top: 4px;">Specify where to save execution logs (CSV files). Leave empty to use default location.</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Schedule Name</label>
+                        <input type="text" class="form-input" id="scheduleName" placeholder="My Daily Sync Schedule">
+                        <div style="font-size: 11px; color: #999; margin-top: 4px;">Optional: Give this schedule a name for easy identification</div>
+                    </div>
+                    
+                    <div class="info-box">
+                        <strong>ℹ️ Note:</strong> Schedules will run automatically at the specified time. Each execution will:
+                        <ul style="margin-top: 8px; margin-left: 20px;">
+                            <li>Fetch data from the selected Google Sheet</li>
+                            <li>Extract information from program URLs</li>
+                            <li>Save results to CSV file at the specified location</li>
+                            <li>Update the Google Sheet with latest data</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="button-primary">💾 Create Schedule</button>
+                        <button type="button" class="button-secondary" onclick="resetForm()">🔄 Reset</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card scheduled-jobs">
+                <div class="card-title">Scheduled Jobs</div>
+                <div id="jobsList">
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        No scheduled jobs yet. Create your first schedule above.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9L38LMVnlwRn3njGCamnj8fBXvh_601I",
+            authDomain: "programinfo-603ec.firebaseapp.com",
+            projectId: "programinfo-603ec",
+            storageBucket: "programinfo-603ec.firebasestorage.app",
+            messagingSenderId: "238141381016",
+            appId: "1:238141381016:web:27f10baf9b8f7208ef33ed",
+            measurementId: "G-RMW41YRN56"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        // Check authentication
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.replace('/login.html');
+            } else {
+                updateUserProfile(user);
+            }
+        });
+        
+        function updateUserProfile(user) {
+            const avatar = document.getElementById('userAvatar');
+            const email = document.getElementById('userEmail');
+            const initial = user.email ? user.email.charAt(0).toUpperCase() : 'A';
+            if (avatar) avatar.textContent = initial;
+            if (email) email.textContent = user.email || 'admin@canamiapply.com';
+        }
+        
+        window.logout = async function() {
+            try {
+                await signOut(auth);
+                window.location.replace('/login.html');
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        };
+        
+        // Load schedules from localStorage
+        function loadSchedules() {
+            const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+            displaySchedules(schedules);
+        }
+        
+        // Display schedules
+        function displaySchedules(schedules) {
+            const jobsList = document.getElementById('jobsList');
+            if (!schedules || schedules.length === 0) {
+                jobsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No scheduled jobs yet. Create your first schedule above.</div>';
+                return;
+            }
+            
+            let html = '';
+            schedules.forEach((schedule, index) => {
+                const status = schedule.paused ? 'paused' : 'active';
+                const nextRun = schedule.nextRun ? new Date(schedule.nextRun).toLocaleString() : 'Not scheduled';
+                html += `
+                    <div class="job-item ${status}">
+                        <div class="job-header">
+                            <div class="job-title">${schedule.name || `Schedule ${index + 1}`}</div>
+                            <span class="job-status ${status}">${status.toUpperCase()}</span>
+                        </div>
+                        <div class="job-details">
+                            <div><strong>Sheet:</strong> ${schedule.sheetUrl.substring(0, 60)}...</div>
+                            <div><strong>Frequency:</strong> ${schedule.frequency}</div>
+                            <div><strong>Time:</strong> ${schedule.time} (${schedule.timezone})</div>
+                            <div><strong>Period:</strong> ${schedule.startDate} to ${schedule.endDate}</div>
+                            <div><strong>Next Run:</strong> ${nextRun}</div>
+                            ${schedule.logLocation ? `<div><strong>Logs:</strong> ${schedule.logLocation}</div>` : ''}
+                        </div>
+                        <div class="job-actions">
+                            ${schedule.paused ? 
+                                `<button class="button-small resume" onclick="resumeSchedule(${index})">▶️ Resume</button>` :
+                                `<button class="button-small pause" onclick="pauseSchedule(${index})">⏸️ Pause</button>`
+                            }
+                            <button class="button-small edit" onclick="editSchedule(${index})">✏️ Edit</button>
+                            <button class="button-small delete" onclick="deleteSchedule(${index})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            jobsList.innerHTML = html;
+        }
+        
+        // Create schedule
+        document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const sheetUrl = document.getElementById('sheetUrl').value.trim();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const frequency = document.getElementById('frequency').value;
+            const customCron = document.getElementById('customCron').value.trim();
+            const scheduleTime = document.getElementById('scheduleTime').value;
+            const timezone = document.getElementById('timezone').value;
+            const logLocation = document.getElementById('logLocation').value.trim();
+            const scheduleName = document.getElementById('scheduleName').value.trim();
+            
+            if (!sheetUrl || !startDate || !endDate || !frequency || !scheduleTime) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                showMessage('End date must be after start date', 'error');
+                return;
+            }
+            
+            // Calculate next run time
+            const nextRun = calculateNextRun(startDate, scheduleTime, frequency, customCron);
+            
+            const schedule = {
+                id: Date.now(),
+                name: scheduleName || `Schedule ${new Date().toLocaleString()}`,
+                sheetUrl: sheetUrl,
+                startDate: startDate,
+                endDate: endDate,
+                frequency: frequency,
+                cronExpression: frequency === 'custom' ? customCron : getCronExpression(frequency, scheduleTime),
+                time: scheduleTime,
+                timezone: timezone,
+                logLocation: logLocation || '/logs/admissions-tracker/',
+                paused: false,
+                createdAt: new Date().toISOString(),
+                nextRun: nextRun.toISOString()
+            };
+            
+            // Save to localStorage
+            const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+            schedules.push(schedule);
+            localStorage.setItem('schedules', JSON.stringify(schedules));
+            
+            showMessage('Schedule created successfully!', 'success');
+            resetForm();
+            loadSchedules();
+            
+            // Start scheduler if not already running
+            startScheduler();
+        });
+        
+        // Calculate next run time
+        function calculateNextRun(startDate, time, frequency, customCron) {
+            const now = new Date();
+            const [hours, minutes] = time.split(':');
+            const start = new Date(startDate);
+            start.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            
+            if (start < now) {
+                // If start time has passed, calculate next occurrence
+                switch(frequency) {
+                    case 'daily':
+                        start.setDate(start.getDate() + 1);
+                        break;
+                    case 'weekly':
+                        start.setDate(start.getDate() + 7);
+                        break;
+                    case 'biweekly':
+                        start.setDate(start.getDate() + 14);
+                        break;
+                    case 'monthly':
+                        start.setMonth(start.getMonth() + 1);
+                        break;
+                    default:
+                        start.setDate(start.getDate() + 1);
+                }
+            }
+            
+            return start;
+        }
+        
+        // Get cron expression
+        function getCronExpression(frequency, time) {
+            const [hours, minutes] = time.split(':');
+            switch(frequency) {
+                case 'daily':
+                    return `${minutes} ${hours} * * *`;
+                case 'weekly':
+                    return `${minutes} ${hours} * * 0`; // Sunday
+                case 'biweekly':
+                    return `${minutes} ${hours} */14 * *`;
+                case 'monthly':
+                    return `${minutes} ${hours} 1 * *`;
+                default:
+                    return `${minutes} ${hours} * * *`;
+            }
+        }
+        
+        // Pause schedule
+        window.pauseSchedule = function(index) {
+            const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+            schedules[index].paused = true;
+            localStorage.setItem('schedules', JSON.stringify(schedules));
+            loadSchedules();
+            showMessage('Schedule paused', 'success');
+        };
+        
+        // Resume schedule
+        window.resumeSchedule = function(index) {
+            const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+            schedules[index].paused = false;
+            schedules[index].nextRun = calculateNextRun(
+                schedules[index].startDate,
+                schedules[index].time,
+                schedules[index].frequency,
+                schedules[index].cronExpression
+            ).toISOString();
+            localStorage.setItem('schedules', JSON.stringify(schedules));
+            loadSchedules();
+            showMessage('Schedule resumed', 'success');
+        };
+        
+        // Edit schedule
+        window.editSchedule = function(index) {
+            const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+            const schedule = schedules[index];
+            
+            document.getElementById('sheetUrl').value = schedule.sheetUrl;
+            document.getElementById('startDate').value = schedule.startDate;
+            document.getElementById('endDate').value = schedule.endDate;
+            document.getElementById('frequency').value = schedule.frequency;
+            document.getElementById('scheduleTime').value = schedule.time;
+            document.getElementById('timezone').value = schedule.timezone;
+            document.getElementById('logLocation').value = schedule.logLocation || '';
+            document.getElementById('scheduleName').value = schedule.name || '';
+            
+            if (schedule.frequency === 'custom') {
+                document.getElementById('customCronGroup').style.display = 'block';
+                document.getElementById('customCron').value = schedule.cronExpression;
+            }
+            
+            // Delete old schedule
+            schedules.splice(index, 1);
+            localStorage.setItem('schedules', JSON.stringify(schedules));
+            loadSchedules();
+            
+            showMessage('Schedule loaded for editing. Update and save.', 'success');
+        };
+        
+        // Delete schedule
+        window.deleteSchedule = function(index) {
+            if (!confirm('Are you sure you want to delete this schedule?')) return;
+            
+            const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+            schedules.splice(index, 1);
+            localStorage.setItem('schedules', JSON.stringify(schedules));
+            loadSchedules();
+            showMessage('Schedule deleted', 'success');
+        };
+        
+        // Reset form
+        window.resetForm = function() {
+            document.getElementById('scheduleForm').reset();
+            document.getElementById('customCronGroup').style.display = 'none';
+            document.getElementById('messageContainer').innerHTML = '';
+        };
+        
+        // Show message
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            const className = type === 'success' ? 'success-message' : 'error-message';
+            container.innerHTML = `<div class="${className}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Show custom cron input when custom frequency selected
+        document.getElementById('frequency').addEventListener('change', function() {
+            const customGroup = document.getElementById('customCronGroup');
+            if (this.value === 'custom') {
+                customGroup.style.display = 'block';
+            } else {
+                customGroup.style.display = 'none';
+            }
+        });
+        
+        // Scheduler execution
+        let schedulerInterval = null;
+        
+        function startScheduler() {
+            if (schedulerInterval) return; // Already running
+            
+            schedulerInterval = setInterval(() => {
+                const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+                const now = new Date();
+                
+                schedules.forEach((schedule, index) => {
+                    if (schedule.paused) return;
+                    if (new Date(schedule.endDate) < now) return; // Past end date
+                    
+                    const nextRun = new Date(schedule.nextRun);
+                    if (now >= nextRun) {
+                        // Execute schedule
+                        executeSchedule(schedule, index);
+                        
+                        // Calculate next run
+                        const newNextRun = calculateNextRun(
+                            schedule.startDate,
+                            schedule.time,
+                            schedule.frequency,
+                            schedule.cronExpression
+                        );
+                        
+                        // Update schedule
+                        schedule.nextRun = newNextRun.toISOString();
+                        schedules[index] = schedule;
+                        localStorage.setItem('schedules', JSON.stringify(schedules));
+                        loadSchedules();
+                    }
+                });
+            }, 60000); // Check every minute
+        }
+        
+        async function executeSchedule(schedule, index) {
+            console.log(`Executing schedule: ${schedule.name}`);
+            
+            // Open dashboard in new tab/window and trigger sync
+            // Since we can't directly control another tab, we'll use a workaround
+            // Store execution request in localStorage
+            localStorage.setItem('pendingSync', JSON.stringify({
+                sheetUrl: schedule.sheetUrl,
+                logLocation: schedule.logLocation,
+                scheduleId: schedule.id,
+                timestamp: new Date().toISOString()
+            }));
+            
+            // Show notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Schedule Executed', {
+                    body: `Running sync for: ${schedule.name}`,
+                    icon: '/favicon.ico'
+                });
+            }
+            
+            // Log execution
+            const executions = JSON.parse(localStorage.getItem('scheduleExecutions') || '[]');
+            executions.push({
+                scheduleId: schedule.id,
+                scheduleName: schedule.name,
+                executedAt: new Date().toISOString(),
+                status: 'triggered'
+            });
+            localStorage.setItem('scheduleExecutions', JSON.stringify(executions));
+        }
+        
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        // Load schedules on page load
+        loadSchedules();
+        startScheduler();
+        
+        // Set default dates
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('startDate').value = today.toISOString().split('T')[0];
+        document.getElementById('endDate').value = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+        
+        // AI Agent Config (reuse from index.html)
+        window.showAIAgentConfig = function() {
+            alert('AI Agent configuration is available on the Dashboard page.');
+            window.location.href = '/index.html';
+        };
+    </script>
+</body>
+</html>
+
