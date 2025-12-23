@@ -26,7 +26,7 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
-    let { url, programName, universityName, aiProvider = 'gemini', apiKey, geminiApiKey } = body;
+    const { url, programName, universityName, aiProvider = 'gemini', apiKey } = body;
 
     if (!url) {
       return new Response(JSON.stringify({ error: 'URL is required' }), {
@@ -38,7 +38,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    if (!apiKey && !geminiApiKey) {
+    if (!apiKey) {
       return new Response(JSON.stringify({ error: 'AI API key is required' }), {
         status: 400,
         headers: {
@@ -107,48 +107,13 @@ export async function onRequestPost(context) {
       .replace(/\s+/g, ' ')
       .substring(0, 50000); // Limit to 50KB for AI API
 
-    // Step 3: Extract data using AI (with automatic fallback to Gemini on rate limit)
+    // Step 3: Extract data using AI
     let extractedData;
     
     if (aiProvider === 'gemini') {
       extractedData = await extractWithGemini(cleanHtml, programName, universityName, url, apiKey);
     } else if (aiProvider === 'openai') {
-      try {
-        extractedData = await extractWithOpenAI(cleanHtml, programName, universityName, url, apiKey);
-      } catch (openaiError) {
-        // Check if it's a rate limit error
-        if (openaiError.message.includes('429') || openaiError.message.includes('rate limit') || openaiError.message.includes('Rate limit')) {
-          // Automatic fallback to Gemini if available
-          if (geminiApiKey) {
-            // Return a special response indicating fallback
-            return new Response(JSON.stringify({
-              error: 'OpenAI rate limit reached. Automatically falling back to Gemini.',
-              fallback: true,
-              originalProvider: 'openai',
-              fallbackProvider: 'gemini',
-              admissionDeadline: 'NOT_FOUND',
-              casDeadline: 'NOT_FOUND',
-              i20Deadline: 'NOT_FOUND',
-              intakesAvailable: 'NOT_FOUND',
-              intakeStatus: 'NOT_FOUND',
-              campusLocation: 'NOT_FOUND',
-              remarks: 'OpenAI rate limited, please retry with Gemini or wait for rate limit reset'
-            }), {
-              status: 429,
-              headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
-          } else {
-            // No Gemini fallback available, return rate limit error
-            throw openaiError;
-          }
-        } else {
-          // Other OpenAI error, rethrow
-          throw openaiError;
-        }
-      }
+      extractedData = await extractWithOpenAI(cleanHtml, programName, universityName, url, apiKey);
     } else {
       throw new Error(`Unsupported AI provider: ${aiProvider}`);
     }

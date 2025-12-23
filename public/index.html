@@ -2019,13 +2019,7 @@ Rules:
                                     const agentName = config.aiProvider === 'gemini' ? 'Gemini 1.5 Flash' : 'OpenAI GPT-4';
                                     // Use backend API for proper extraction (server-side, no CORS)
                                     addStreamLine('info', `[${processedCount}] 🤖 Using backend API with AI extraction (${agentName})...`);
-                                    // Initialize AI progress with proper token limits
-                                    const defaultTokenLimit = config.aiProvider === 'gemini' ? 1000000 : 100000; // Gemini has higher limits
-                                    updateAIProgress(agentName, 0, defaultTokenLimit);
-                                    
-                                    let extracted = null;
-                                    let shouldFallbackToGemini = false;
-                                    
+                                    updateAIProgress(agentName, 0, 0); // Initialize AI progress
                                     try {
                                         const apiResponse = await fetch('/api/extract', {
                                             method: 'POST',
@@ -2037,73 +2031,19 @@ Rules:
                                                 programName: program.programName || program.program,
                                                 universityName: program.universityName || program.university,
                                                 aiProvider: config.aiProvider,
-                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey,
-                                                geminiApiKey: config.geminiApiKey // Always send Gemini key for fallback
+                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey
                                             })
                                         });
                                         
                                         if (!apiResponse.ok) {
                                             const errorData = await apiResponse.json().catch(() => ({ error: `HTTP ${apiResponse.status}` }));
-                                            
-                                            // Check if it's a rate limit error with fallback suggestion
-                                            if (apiResponse.status === 429 && errorData.fallback && config.geminiApiKey && config.aiProvider === 'openai') {
-                                                shouldFallbackToGemini = true;
-                                                addStreamLine('warning', `[${processedCount}] ⚠️ OpenAI rate limit reached. Automatically switching to Gemini...`);
-                                            } else {
-                                                throw new Error(errorData.error || `API returned HTTP ${apiResponse.status}`);
-                                            }
-                                        } else {
-                                            extracted = await apiResponse.json();
+                                            throw new Error(errorData.error || `API returned HTTP ${apiResponse.status}`);
                                         }
-                                    } catch (apiError) {
-                                        // Check if it's a rate limit error and we can fallback to Gemini
-                                        if ((apiError.message.includes('429') || apiError.message.includes('rate limit') || apiError.message.includes('Rate limit')) 
-                                            && config.geminiApiKey && config.aiProvider === 'openai') {
-                                            shouldFallbackToGemini = true;
-                                            addStreamLine('warning', `[${processedCount}] ⚠️ OpenAI rate limit reached. Automatically switching to Gemini...`);
-                                        } else {
-                                            throw apiError;
-                                        }
-                                    }
-                                    
-                                    // Automatic fallback to Gemini if OpenAI rate limited
-                                    if (shouldFallbackToGemini && config.geminiApiKey) {
-                                        try {
-                                            addStreamLine('info', `[${processedCount}] 🔄 Retrying with Gemini 1.5 Flash...`);
-                                            updateAIProgress('Gemini 1.5 Flash', 0, 1000000);
-                                            
-                                            const geminiResponse = await fetch('/api/extract', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                },
-                                                body: JSON.stringify({
-                                                    url: url,
-                                                    programName: program.programName || program.program,
-                                                    universityName: program.universityName || program.university,
-                                                    aiProvider: 'gemini',
-                                                    apiKey: config.geminiApiKey
-                                                })
-                                            });
-                                            
-                                            if (geminiResponse.ok) {
-                                                extracted = await geminiResponse.json();
-                                                const estimatedTokens = 2000;
-                                                updateAIProgress('Gemini 1.5 Flash', estimatedTokens, 0);
-                                                addStreamLine('success', `[${processedCount}] ✅ Successfully extracted using Gemini fallback`);
-                                            } else {
-                                                throw new Error(`Gemini fallback also failed: HTTP ${geminiResponse.status}`);
-                                            }
-                                        } catch (geminiError) {
-                                            addStreamLine('error', `[${processedCount}] Gemini fallback also failed: ${geminiError.message}`);
-                                            throw new Error(`Both OpenAI and Gemini failed. ${geminiError.message}`);
-                                        }
-                                    }
-                                    
-                                    if (extracted) {
                                         
-                                        // Estimate tokens used (rough estimate: ~2000 tokens per request for full extraction)
-                                        const estimatedTokens = 2000;
+                                        const extracted = await apiResponse.json();
+                                        
+                                        // Estimate tokens used (rough estimate: ~1000 tokens per request)
+                                        const estimatedTokens = 1000;
                                         updateAIProgress(agentName, estimatedTokens, 0);
                                         
                                         // Handle multiple programs/campuses - create separate rows
@@ -2212,21 +2152,7 @@ Rules:
                                         
                                         continue; // Skip to next program
                                     } catch (apiError) {
-                                        // Track AI usage even on failure (request was attempted)
-                                        const errorTokens = 500; // Estimate tokens used before error
-                                        updateAIProgress(agentName, errorTokens, 0);
-                                        
-                                        syncStats.errorMessages++;
-                                        updateStat('statErrorMessages', syncStats.errorMessages);
-                                        
-                                        // Check if rate limited
-                                        if (apiError.message.includes('429') || apiError.message.includes('rate limit') || apiError.message.includes('Rate limit')) {
-                                            syncStats.urlsBlocked++;
-                                            updateStat('statUrlsBlocked', syncStats.urlsBlocked);
-                                            addStreamLine('warning', `[${processedCount}] ⚠️ AI Rate limit reached. Will try pattern matching and AI fallback...`);
-                                        } else {
-                                            addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
-                                        }
+                                        addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
                                         // Fall through to pattern matching below
                                     }
                                 } else {
@@ -2268,70 +2194,21 @@ Rules:
                                         url
                                     );
                                     
-                                    // If pattern matching found little or nothing, try AI as enhancement/fallback
-                                    const needsAIEnhancement = hasAIKey && (
-                                        extracted.admissionDeadline === 'NOT_FOUND' || 
-                                        extracted.intakesAvailable === 'NOT_FOUND' ||
-                                        extracted.casDeadline === 'NOT_FOUND' ||
-                                        extracted.i20Deadline === 'NOT_FOUND' ||
-                                        extracted.intakeStatus === 'NOT_FOUND' ||
-                                        extracted.campusLocation === 'NOT_FOUND'
-                                    );
-                                    
-                                    if (needsAIEnhancement) {
-                                        const agentName = config.aiProvider === 'gemini' ? 'Gemini 1.5 Flash' : 'OpenAI GPT-4';
-                                        addStreamLine('info', `[${processedCount}] 🔄 Pattern matching incomplete, using AI Agent as fallback...`);
-                                        updateAIProgress(agentName, 0, 0); // Initialize if not already
-                                        
+                                    // If pattern matching found little, try AI as enhancement
+                                    if (hasAIKey && (extracted.admissionDeadline === 'NOT_FOUND' || extracted.intakesAvailable === 'NOT_FOUND')) {
+                                        addStreamLine('info', `[${processedCount}] Pattern matching incomplete, enhancing with AI Agent...`);
                                         try {
                                             const aiEnhanced = await extractWithAI(htmlContent, program.programName || program.program, program.universityName || program.university, url);
                                             
-                                            // Track AI usage
-                                            const estimatedTokens = 1500; // Estimate for enhancement
-                                            updateAIProgress(agentName, estimatedTokens, 0);
-                                            
-                                            // Use AI results if they're better (replace NOT_FOUND with found values)
+                                            // Use AI results if they're better
                                             if (aiEnhanced.admissionDeadline !== 'NOT_FOUND') extracted.admissionDeadline = aiEnhanced.admissionDeadline;
                                             if (aiEnhanced.casDeadline !== 'NOT_FOUND') extracted.casDeadline = aiEnhanced.casDeadline;
-                                            if (aiEnhanced.i20Deadline !== 'NOT_FOUND') extracted.i20Deadline = aiEnhanced.i20Deadline;
                                             if (aiEnhanced.intakesAvailable !== 'NOT_FOUND') extracted.intakesAvailable = aiEnhanced.intakesAvailable;
-                                            if (aiEnhanced.intakeStatus !== 'NOT_FOUND') extracted.intakeStatus = aiEnhanced.intakeStatus;
-                                            if (aiEnhanced.campusLocation !== 'NOT_FOUND') extracted.campusLocation = aiEnhanced.campusLocation;
                                             if (aiEnhanced.remarks && aiEnhanced.remarks !== 'NOT_FOUND') extracted.remarks = aiEnhanced.remarks;
                                             
-                                            // Update statistics
-                                            if (aiEnhanced.intakesAvailable && aiEnhanced.intakesAvailable !== 'NOT_FOUND') {
-                                                syncStats.intakesFound++;
-                                                updateStat('statIntakesFound', syncStats.intakesFound);
-                                            }
-                                            if ((aiEnhanced.admissionDeadline && aiEnhanced.admissionDeadline !== 'NOT_FOUND') || 
-                                                (aiEnhanced.casDeadline && aiEnhanced.casDeadline !== 'NOT_FOUND') ||
-                                                (aiEnhanced.i20Deadline && aiEnhanced.i20Deadline !== 'NOT_FOUND')) {
-                                                syncStats.deadlinesFound++;
-                                                updateStat('statDeadlinesFound', syncStats.deadlinesFound);
-                                            }
-                                            if (aiEnhanced.remarks && aiEnhanced.remarks !== 'NOT_FOUND') {
-                                                syncStats.remarksFound++;
-                                                updateStat('statRemarksFound', syncStats.remarksFound);
-                                            }
-                                            
-                                            addStreamLine('success', `[${processedCount}] ✅ AI fallback enhancement completed`);
+                                            addStreamLine('success', `[${processedCount}] ✅ AI enhancement completed`);
                                         } catch (aiError) {
-                                            // Track AI usage even on failure
-                                            const errorTokens = 500;
-                                            updateAIProgress(agentName, errorTokens, 0);
-                                            
-                                            syncStats.errorMessages++;
-                                            updateStat('statErrorMessages', syncStats.errorMessages);
-                                            
-                                            // Check if rate limited
-                                            if (aiError.message.includes('429') || aiError.message.includes('rate limit')) {
-                                                syncStats.urlsBlocked++;
-                                                updateStat('statUrlsBlocked', syncStats.urlsBlocked);
-                                                addStreamLine('warning', `[${processedCount}] ⚠️ AI Rate limit. Using pattern matching results only.`);
-                                            } else {
-                                                addStreamLine('warning', `[${processedCount}] AI enhancement failed: ${aiError.message}. Using pattern matching results.`);
-                                            }
+                                            addStreamLine('warning', `[${processedCount}] AI enhancement failed, using pattern matching results`);
                                         }
                                     }
                                 } else {
