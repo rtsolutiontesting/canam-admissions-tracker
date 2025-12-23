@@ -1293,20 +1293,18 @@
                 }
                 const headers = ['Sr', 'universityName', 'Location', 'programName', 'admissionsPageUrl', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'errorMessage', 'checkedDate', 'remarks'];
                 const csvRows = [headers.join(',')];
-                dataToExport.forEach(item => {
+                dataToExport.forEach((item, index) => {
                     const row = [
-                        escapeCSV(item.university || ''),
-                        escapeCSV(item.program || ''),
-                        escapeCSV(item.country || 'N/A'),
-                        escapeCSV(item.url || item.admissionsPageUrl || 'N/A'),
-                        escapeCSV(item.intakeOffered || 'NOT_FOUND'),
-                        escapeCSV(item.intakeStatus || item.status || 'NOT_FOUND'),
-                        escapeCSV(item.applicationDeadline || item.deadline || 'NOT_FOUND'),
-                        escapeCSV(item.casDeadline || 'NOT_FOUND'),
-                        escapeCSV(item.i20Deadline || 'NOT_FOUND'),
-                        escapeCSV(item.admissionAlerts || 'NOT_FOUND'),
-                        escapeCSV(item.changeType || 'UNKNOWN'),
-                        escapeCSV(item.lastChecked || new Date().toISOString())
+                        escapeCSV(item.sr || (index + 1)),
+                        escapeCSV(item.universityName || item.university || ''),
+                        escapeCSV(item.location || item.country || 'NOT_FOUND'),
+                        escapeCSV(item.programName || item.program || ''),
+                        escapeCSV(item.admissionsPageUrl || item.url || ''),
+                        escapeCSV(item.admissionDeadline_found || item.applicationDeadline || item.deadline || 'NOT_FOUND'),
+                        escapeCSV(item.casSubmissionDeadline_found || item.casDeadline || 'NOT_FOUND'),
+                        escapeCSV(item.errorMessage || ''),
+                        escapeCSV(item.checkedDate || new Date().toISOString().split('T')[0]),
+                        escapeCSV(item.remarks || item.admissionAlerts || '')
                     ];
                     csvRows.push(row.join(','));
                 });
