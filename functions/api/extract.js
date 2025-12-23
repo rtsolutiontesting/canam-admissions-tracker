@@ -85,8 +85,10 @@ export async function onRequestPost(context) {
         error: `Failed to fetch URL: ${fetchError.message}`,
         admissionDeadline: 'NOT_FOUND',
         casDeadline: 'NOT_FOUND',
+        i20Deadline: 'NOT_FOUND',
         intakesAvailable: 'NOT_FOUND',
         intakeStatus: 'NOT_FOUND',
+        campusLocation: 'NOT_FOUND',
         remarks: `Fetch error: ${fetchError.message}`
       }), {
         status: 500,
@@ -167,13 +169,17 @@ Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
 2. Dates must be in YYYY-MM-DD format
 3. If information not found, use "NOT_FOUND"
-4. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-5. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by"
-6. Check tabs, dropdowns, and hidden content for information
-7. Parse dates in various formats and convert to YYYY-MM-DD
-8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically
-9. Extract multiple intakes if available (comma-separated)
-10. Be thorough - check all sections of the page`;
+4. Extract campus location from page (look for "campus", "location", address, city names)
+5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
+6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by"
+7. Check intake status: "open", "closed", "waitlist", or "NOT_FOUND"
+8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs)
+9. Look for I-20 deadlines specifically (USA programs)
+10. Check tabs, dropdowns, and hidden content for information
+11. Parse dates in various formats and convert to YYYY-MM-DD
+12. Extract multiple intakes if available (comma-separated)
+13. If page has multiple programs or campuses, populate multiplePrograms or multipleCampuses arrays
+14. Be thorough - check all sections of the page`;
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -223,9 +229,13 @@ Rules:
     return {
       admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
       casDeadline: extracted.casDeadline || 'NOT_FOUND',
+      i20Deadline: extracted.i20Deadline || 'NOT_FOUND',
       intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
-      intakeStatus: extracted.intakeStatus || 'open',
+      intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
+      campusLocation: extracted.campusLocation || 'NOT_FOUND',
       remarks: extracted.remarks || 'Extracted via Gemini AI',
+      multiplePrograms: extracted.multiplePrograms || [],
+      multipleCampuses: extracted.multipleCampuses || [],
       errorMessage: ''
     };
   } catch (error) {
@@ -256,13 +266,17 @@ Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
 2. Dates must be in YYYY-MM-DD format
 3. If information not found, use "NOT_FOUND"
-4. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-5. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by"
-6. Check tabs, dropdowns, and hidden content for information
-7. Parse dates in various formats and convert to YYYY-MM-DD
-8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically
-9. Extract multiple intakes if available (comma-separated)
-10. Be thorough - check all sections of the page`;
+4. Extract campus location from page (look for "campus", "location", address, city names)
+5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
+6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by"
+7. Check intake status: "open", "closed", "waitlist", or "NOT_FOUND"
+8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs)
+9. Look for I-20 deadlines specifically (USA programs)
+10. Check tabs, dropdowns, and hidden content for information
+11. Parse dates in various formats and convert to YYYY-MM-DD
+12. Extract multiple intakes if available (comma-separated)
+13. If page has multiple programs or campuses, populate multiplePrograms or multipleCampuses arrays
+14. Be thorough - check all sections of the page`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -316,9 +330,13 @@ Rules:
     return {
       admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
       casDeadline: extracted.casDeadline || 'NOT_FOUND',
+      i20Deadline: extracted.i20Deadline || 'NOT_FOUND',
       intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
-      intakeStatus: extracted.intakeStatus || 'open',
+      intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
+      campusLocation: extracted.campusLocation || 'NOT_FOUND',
       remarks: extracted.remarks || 'Extracted via OpenAI',
+      multiplePrograms: extracted.multiplePrograms || [],
+      multipleCampuses: extracted.multipleCampuses || [],
       errorMessage: ''
     };
   } catch (error) {

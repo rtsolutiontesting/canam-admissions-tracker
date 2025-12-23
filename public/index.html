@@ -310,12 +310,14 @@
                                         <tr>
                                             <th>Sr</th>
                                             <th>universityName</th>
-                                            <th>Location</th>
+                                            <th>Campus Location</th>
                                             <th>programName</th>
                                             <th>admissionsPageUrl</th>
                                             <th>intakesAvailable</th>
                                             <th>admissionDeadline_found</th>
                                             <th>casSubmissionDeadline_found</th>
+                                            <th>i20Deadline_found</th>
+                                            <th>intakeStatus</th>
                                             <th>errorMessage</th>
                                             <th>checkedDate</th>
                                             <th>remarks</th>
@@ -800,9 +802,13 @@
 {
   "admissionDeadline": "YYYY-MM-DD or NOT_FOUND",
   "casDeadline": "YYYY-MM-DD or NOT_FOUND",
+  "i20Deadline": "YYYY-MM-DD or NOT_FOUND",
   "intakesAvailable": "e.g., September 2024, Fall 2024 or NOT_FOUND",
   "intakeStatus": "open/closed/waitlist/NOT_FOUND",
-  "remarks": "any important notes or NOT_FOUND"
+  "campusLocation": "campus name or location (e.g., 'Cambridge Campus', 'London Campus', 'New York Campus') or NOT_FOUND",
+  "remarks": "any important notes or NOT_FOUND",
+  "multiplePrograms": [{"programName": "name", "campusLocation": "location", "admissionDeadline": "date", "casDeadline": "date", "i20Deadline": "date", "intakesAvailable": "intakes", "intakeStatus": "status"}],
+  "multipleCampuses": [{"campusLocation": "location", "admissionDeadline": "date", "casDeadline": "date", "i20Deadline": "date", "intakesAvailable": "intakes", "intakeStatus": "status"}]
 }
 
 University: ${universityName}
@@ -816,10 +822,13 @@ Rules:
 1. Return ONLY the JSON object
 2. Dates must be in YYYY-MM-DD format
 3. If information not found, use "NOT_FOUND"
-4. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25")
-5. Look for deadlines near keywords like "deadline", "closing date", "application closes"
-6. Check tabs, dropdowns, and hidden content for information
-7. Parse dates in various formats and convert to YYYY-MM-DD`;
+4. Extract campus location from page (look for "campus", "location", address, city names)
+5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25")
+6. Look for deadlines near keywords like "deadline", "closing date", "application closes"
+7. Check intake status: "open", "closed", "waitlist", or "NOT_FOUND"
+8. Check tabs, dropdowns, and hidden content for information
+9. If page has multiple programs or campuses, populate multiplePrograms or multipleCampuses arrays
+10. Parse dates in various formats and convert to YYYY-MM-DD`;
 
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -870,9 +879,13 @@ Rules:
 {
   "admissionDeadline": "YYYY-MM-DD or NOT_FOUND",
   "casDeadline": "YYYY-MM-DD or NOT_FOUND",
+  "i20Deadline": "YYYY-MM-DD or NOT_FOUND",
   "intakesAvailable": "e.g., September 2024, Fall 2024 or NOT_FOUND",
   "intakeStatus": "open/closed/waitlist/NOT_FOUND",
-  "remarks": "any important notes or NOT_FOUND"
+  "campusLocation": "campus name or location (e.g., 'Cambridge Campus', 'London Campus', 'New York Campus') or NOT_FOUND",
+  "remarks": "any important notes or NOT_FOUND",
+  "multiplePrograms": [{"programName": "name", "campusLocation": "location", "admissionDeadline": "date", "casDeadline": "date", "i20Deadline": "date", "intakesAvailable": "intakes", "intakeStatus": "status"}],
+  "multipleCampuses": [{"campusLocation": "location", "admissionDeadline": "date", "casDeadline": "date", "i20Deadline": "date", "intakesAvailable": "intakes", "intakeStatus": "status"}]
 }
 
 University: ${universityName}
@@ -886,8 +899,11 @@ Rules:
 1. Return ONLY the JSON object
 2. Dates must be in YYYY-MM-DD format
 3. If information not found, use "NOT_FOUND"
-4. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25")
-5. Look for deadlines near keywords like "deadline", "closing date", "application closes"`;
+4. Extract campus location from page (look for "campus", "location", address, city names)
+5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25")
+6. Look for deadlines near keywords like "deadline", "closing date", "application closes"
+7. Check intake status: "open", "closed", "waitlist", or "NOT_FOUND"
+8. If page has multiple programs or campuses, populate multiplePrograms or multipleCampuses arrays`;
 
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -2030,31 +2046,110 @@ Rules:
                                         const estimatedTokens = 1000;
                                         updateAIProgress(agentName, estimatedTokens, 0);
                                         
-                                        // Update program with extracted data
-                                        program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
-                                        program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
-                                        program.intakesAvailable = extracted.intakesAvailable || 'NOT_FOUND';
-                                        program.errorMessage = extracted.errorMessage || '';
-                                        program.checkedDate = new Date().toISOString().split('T')[0];
-                                        program.remarks = extracted.remarks || 'Extracted via backend API + AI';
-                                        program.intakeStatus = extracted.intakeStatus || 'open';
-                                        program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
-                                        program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
-                                        program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
-                                        program.changeType = 'NEW'; // Mark as new/fetched data
-                                        program.isNewlyFetched = true; // Flag for highlighting
-                                        program.lastChecked = new Date().toISOString();
+                                        // Handle multiple programs/campuses - create separate rows
+                                        const programsToAdd = [];
                                         
-                                        // Add NLP preview
-                                        addNLPPreview(
-                                            program.programName || program.program,
-                                            program.universityName || program.university,
-                                            extracted,
-                                            true // isNew
-                                        );
+                                        // Check for multiple programs
+                                        if (extracted.multiplePrograms && extracted.multiplePrograms.length > 0) {
+                                            extracted.multiplePrograms.forEach((multiProg, idx) => {
+                                                const newProgram = {
+                                                    ...program,
+                                                    programName: multiProg.programName || program.programName || program.program,
+                                                    location: multiProg.campusLocation || extracted.campusLocation || program.location || 'NOT_FOUND',
+                                                    admissionDeadline_found: multiProg.admissionDeadline || 'NOT_FOUND',
+                                                    casSubmissionDeadline_found: multiProg.casDeadline || 'NOT_FOUND',
+                                                    i20Deadline_found: multiProg.i20Deadline || 'NOT_FOUND',
+                                                    intakesAvailable: multiProg.intakesAvailable || 'NOT_FOUND',
+                                                    intakeStatus: multiProg.intakeStatus || 'NOT_FOUND',
+                                                    errorMessage: '',
+                                                    checkedDate: new Date().toISOString().split('T')[0],
+                                                    remarks: extracted.remarks || 'Extracted via backend API + AI',
+                                                    changeType: 'NEW',
+                                                    isNewlyFetched: true,
+                                                    lastChecked: new Date().toISOString()
+                                                };
+                                                programsToAdd.push(newProgram);
+                                            });
+                                        }
+                                        // Check for multiple campuses
+                                        else if (extracted.multipleCampuses && extracted.multipleCampuses.length > 0) {
+                                            extracted.multipleCampuses.forEach((multiCampus, idx) => {
+                                                const newProgram = {
+                                                    ...program,
+                                                    location: multiCampus.campusLocation || 'NOT_FOUND',
+                                                    admissionDeadline_found: multiCampus.admissionDeadline || 'NOT_FOUND',
+                                                    casSubmissionDeadline_found: multiCampus.casDeadline || 'NOT_FOUND',
+                                                    i20Deadline_found: multiCampus.i20Deadline || 'NOT_FOUND',
+                                                    intakesAvailable: multiCampus.intakesAvailable || 'NOT_FOUND',
+                                                    intakeStatus: multiCampus.intakeStatus || 'NOT_FOUND',
+                                                    errorMessage: '',
+                                                    checkedDate: new Date().toISOString().split('T')[0],
+                                                    remarks: extracted.remarks || 'Extracted via backend API + AI',
+                                                    changeType: 'NEW',
+                                                    isNewlyFetched: true,
+                                                    lastChecked: new Date().toISOString()
+                                                };
+                                                programsToAdd.push(newProgram);
+                                            });
+                                        }
+                                        // Single program/campus
+                                        else {
+                                            program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
+                                            program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
+                                            program.i20Deadline_found = extracted.i20Deadline || 'NOT_FOUND';
+                                            program.intakesAvailable = extracted.intakesAvailable || 'NOT_FOUND';
+                                            program.intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
+                                            program.location = extracted.campusLocation || program.location || 'NOT_FOUND';
+                                            program.errorMessage = extracted.errorMessage || '';
+                                            program.checkedDate = new Date().toISOString().split('T')[0];
+                                            program.remarks = extracted.remarks || 'Extracted via backend API + AI';
+                                            program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
+                                            program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
+                                            program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
+                                            program.changeType = 'NEW';
+                                            program.isNewlyFetched = true;
+                                            program.lastChecked = new Date().toISOString();
+                                            
+                                            // Add NLP preview
+                                            addNLPPreview(
+                                                program.programName || program.program,
+                                                program.universityName || program.university,
+                                                extracted,
+                                                true
+                                            );
+                                            
+                                            successCount++;
+                                            addStreamLine('success', `✅ [${processedCount}] Backend API extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}, Intakes: ${program.intakesAvailable}`);
+                                        }
                                         
-                                        successCount++;
-                                        addStreamLine('success', `✅ [${processedCount}] Backend API extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}, Intakes: ${program.intakesAvailable}`);
+                                        // Add multiple programs/campuses to data store
+                                        if (programsToAdd.length > 0) {
+                                            programsToAdd.forEach((newProg, idx) => {
+                                                programDataStore.push(newProg);
+                                                addNLPPreview(
+                                                    newProg.programName || newProg.program,
+                                                    newProg.universityName || newProg.university,
+                                                    {
+                                                        campusLocation: newProg.location,
+                                                        admissionDeadline: newProg.admissionDeadline_found,
+                                                        casDeadline: newProg.casSubmissionDeadline_found,
+                                                        i20Deadline: newProg.i20Deadline_found,
+                                                        intakesAvailable: newProg.intakesAvailable,
+                                                        intakeStatus: newProg.intakeStatus,
+                                                        remarks: newProg.remarks
+                                                    },
+                                                    true
+                                                );
+                                                successCount++;
+                                                addStreamLine('success', `✅ [${processedCount}] Added ${programsToAdd.length > 1 ? 'program/campus' : 'program'}: ${newProg.universityName || newProg.university} - ${newProg.programName || newProg.program} (${newProg.location})`);
+                                            });
+                                            // Remove original program if we created multiple rows
+                                            const originalIndex = programDataStore.findIndex(p => p === program);
+                                            if (originalIndex >= 0) {
+                                                programDataStore.splice(originalIndex, 1);
+                                            }
+                                        }
+                                        
                                         continue; // Skip to next program
                                     } catch (apiError) {
                                         addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
