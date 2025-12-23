@@ -19,7 +19,13 @@
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:deploy:all": "firebase deploy",
     "firebase:use": "firebase use",
-    "firebase:projects:list": "firebase projects:list"
+    "firebase:projects:list": "firebase projects:list",
+    "cf:login": "wrangler login",
+    "cf:whoami": "wrangler whoami",
+    "cf:projects": "wrangler pages project list",
+    "cf:deployments": "wrangler pages deployment list --project-name=canam-admissions-tracker",
+    "cf:tail": "wrangler pages deployment tail --project-name=canam-admissions-tracker",
+    "cf:status": "wrangler pages deployment list --project-name=canam-admissions-tracker"
   },
   "keywords": [
     "university",
@@ -31,23 +37,23 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/generative-ai": "^0.2.0",
     "@google-cloud/firestore": "^7.1.0",
-    "firebase-admin": "^12.0.0",
-    "googleapis": "^128.0.0",
+    "@google/generative-ai": "^0.2.0",
     "axios": "^1.6.0",
     "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "firebase-admin": "^12.0.0",
+    "googleapis": "^128.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
-    "typescript": "^5.3.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "firebase-tools": "^13.0.0",
     "ts-node": "^10.9.2",
-    "firebase-tools": "^13.0.0"
+    "typescript": "^5.3.0",
+    "wrangler": "^4.56.0"
   }
 }
-
