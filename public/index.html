@@ -2044,8 +2044,8 @@ Rules:
                                         
                                         const extracted = await apiResponse.json();
                                         
-                                        // Estimate tokens used (rough estimate: ~1000 tokens per request)
-                                        const estimatedTokens = 1000;
+                                        // Estimate tokens used (rough estimate: ~2000 tokens per request for full extraction)
+                                        const estimatedTokens = 2000;
                                         updateAIProgress(agentName, estimatedTokens, 0);
                                         
                                         // Handle multiple programs/campuses - create separate rows
