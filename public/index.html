@@ -1761,11 +1761,14 @@ Rules:
                                 
                                 // USE PROPER BACKEND API - Server-side fetching + AI extraction
                                 // This is the LEGAL and RELIABLE solution - no CORS issues!
-                                const hasAIKey = (aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey);
+                                const config = getAIConfig();
+                                const hasAIKey = (config.aiProvider === 'gemini' && config.geminiApiKey) || (config.aiProvider === 'openai' && config.openaiApiKey);
                                 
                                 if (hasAIKey) {
+                                    const agentName = config.aiProvider === 'gemini' ? 'Gemini 1.5 Flash' : 'OpenAI GPT-4';
                                     // Use backend API for proper extraction (server-side, no CORS)
-                                    addStreamLine('info', `[${processedCount}] Using backend API with AI extraction (${aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'})...`);
+                                    addStreamLine('info', `[${processedCount}] 🤖 Using backend API with AI extraction (${agentName})...`);
+                                    updateAIProgress(agentName, 0, 0); // Initialize AI progress
                                     try {
                                         const apiResponse = await fetch('/api/extract', {
                                             method: 'POST',
@@ -1776,8 +1779,8 @@ Rules:
                                                 url: url,
                                                 programName: program.programName || program.program,
                                                 universityName: program.universityName || program.university,
-                                                aiProvider: aiProvider,
-                                                apiKey: aiProvider === 'gemini' ? geminiApiKey : openaiApiKey
+                                                aiProvider: config.aiProvider,
+                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey
                                             })
                                         });
                                         
@@ -1787,6 +1790,10 @@ Rules:
                                         }
                                         
                                         const extracted = await apiResponse.json();
+                                        
+                                        // Estimate tokens used (rough estimate: ~1000 tokens per request)
+                                        const estimatedTokens = 1000;
+                                        updateAIProgress(agentName, estimatedTokens, 0);
                                         
                                         // Update program with extracted data
                                         program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
