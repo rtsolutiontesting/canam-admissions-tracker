@@ -2355,25 +2355,38 @@ Rules:
 
                     const srNum = program.sr || rowIndex;
                     const uniName = program.universityName || program.university || 'N/A';
-                    const loc = program.location || 'NOT_FOUND'; // Use campus location, not country
+                    const campusLoc = program.location || program.campusLocation || 'NOT_FOUND'; // Campus location from URL
                     const progName = program.programName || program.program || 'N/A';
                     const admUrl = program.admissionsPageUrl || program.url || '';
                     const intakesAvail = program.intakesAvailable || program.intakeOffered || 'NOT_FOUND';
                     const admDeadline = program.admissionDeadline_found || program.applicationDeadline || deadline || 'NOT_FOUND';
                     const casDeadline = program.casSubmissionDeadline_found || program.casDeadline || 'NOT_FOUND';
+                    const i20Deadline = program.i20Deadline_found || program.i20Deadline || 'NOT_FOUND';
+                    const intakeStatus = program.intakeStatus || 'NOT_FOUND';
                     const errMsg = program.errorMessage || '';
                     const checkDate = program.checkedDate || new Date().toISOString().split('T')[0];
                     const remarks = program.remarks || program.admissionAlerts || '';
                     
+                    // Status badge styling
+                    let statusBadge = '';
+                    if (intakeStatus !== 'NOT_FOUND') {
+                        const statusColor = intakeStatus === 'open' ? '#4caf50' : intakeStatus === 'closed' ? '#f44336' : intakeStatus === 'waitlist' ? '#ff9800' : '#999';
+                        statusBadge = `<span style="background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">${intakeStatus.toUpperCase()}</span>`;
+                    } else {
+                        statusBadge = '<span style="color: #999;">NOT_FOUND</span>';
+                    }
+                    
                     html += `<tr ${rowClass}>`;
                     html += `<td>${srNum}</td>`;
                     html += `<td>${escapeHtml(uniName)}</td>`;
-                    html += `<td>${escapeHtml(loc)}</td>`;
+                    html += `<td>${escapeHtml(campusLoc)}</td>`;
                     html += `<td>${escapeHtml(progName)}</td>`;
                     html += `<td><a href="${escapeHtml(admUrl)}" target="_blank" style="color: #2196f3; text-decoration: underline;">${escapeHtml(admUrl.length > 50 ? admUrl.substring(0, 50) + '...' : admUrl || 'N/A')}</a></td>`;
                     html += `<td>${escapeHtml(intakesAvail)}</td>`;
                     html += `<td>${escapeHtml(admDeadline)}</td>`;
                     html += `<td>${escapeHtml(casDeadline)}</td>`;
+                    html += `<td>${escapeHtml(i20Deadline)}</td>`;
+                    html += `<td>${statusBadge}</td>`;
                     html += `<td style="color: ${errMsg ? '#f44336' : '#4caf50'}; font-size: 12px;">${escapeHtml(errMsg)}</td>`;
                     html += `<td>${checkDate}</td>`;
                     html += `<td>${escapeHtml(remarks)}</td>`;
