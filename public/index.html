@@ -33,13 +33,12 @@
         .api-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; white-space: nowrap; }
         .status-dot { width: 6px; height: 6px; background: #4caf50; border-radius: 50%; flex-shrink: 0; }
         .version-info { font-size: 11px; color: #999; white-space: nowrap; }
-        .content-area { padding: 20px; width: 100%; max-width: 100%; overflow-x: hidden; }
-        .action-buttons-top { display: flex; gap: 8px; align-items: center; padding: 12px 20px; background: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-wrap: wrap; }
-        .left-sidebar { width: 280px; flex-shrink: 0; }
-        .main-content-area { flex: 1; min-width: 0; }
-        .content-layout { display: flex; gap: 20px; }
+        .content-area { padding: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
+        .action-buttons-top { display: flex; gap: 8px; align-items: center; padding: 12px 20px; background: white; border-bottom: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-wrap: wrap; }
+        .main-content-area { width: 100%; padding: 20px; }
         .dashboard-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #333; }
         .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; max-width: 100%; overflow-x: hidden; }
+        .card.full-width { margin: 0; border-radius: 0; box-shadow: none; }
         .small-button { padding: 6px 12px; font-size: 11px; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; white-space: nowrap; }
         .small-button:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .small-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -277,33 +276,9 @@
                 </div>
             </div>
             
-            <!-- Main Content Layout -->
-            <div class="content-layout">
-                <div class="left-sidebar">
-                    <div class="card">
-                        <div class="card-title" style="font-size: 13px; margin-bottom: 15px;">WORKFLOW GUIDE</div>
-                        <div style="font-size: 11px; color: #666; line-height: 1.6;">
-                            <div style="margin-bottom: 10px;">
-                                <strong>1. Enter Sheet URL</strong><br>
-                                Paste your Google Sheet URL above
-                            </div>
-                            <div style="margin-bottom: 10px;">
-                                <strong>2. Authorize Drive</strong><br>
-                                Click "Authorize Drive" to grant access
-                            </div>
-                            <div style="margin-bottom: 10px;">
-                                <strong>3. Load Data</strong><br>
-                                Click "Load Data" to fetch from sheet
-                            </div>
-                            <div>
-                                <strong>4. Sync Now</strong><br>
-                                Click "Sync Now" to extract data
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="main-content-area">
-                    <div class="dashboard-title">Dashboard</div>
+            <!-- Main Content - Full Width -->
+            <div class="main-content-area" style="width: 100%;">
+                <div class="dashboard-title">Dashboard</div>
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div class="card-title" style="margin: 0;">MASTER DATA PREVIEW</div>
