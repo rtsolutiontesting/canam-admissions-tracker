@@ -955,8 +955,10 @@
                     window.updateButtonStates();
                 }
 
-                updateProgressFn(100, `✅ Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel`);
-                addStreamLineFn('success', `✅ Step 1 Complete: Loaded ${programDataStore ? programDataStore.length : 0} programs from Excel file`);
+                // Access programDataStore from window (exposed from module script)
+                const programDataStoreRef = window.programDataStore || [];
+                updateProgressFn(100, `✅ Loaded ${programDataStoreRef.length} programs from Excel`);
+                addStreamLineFn('success', `✅ Step 1 Complete: Loaded ${programDataStoreRef.length} programs from Excel file`);
                 addStreamLineFn('info', 'You can now proceed to Step 3: Sync Now');
 
             } catch (error) {
@@ -1099,12 +1101,35 @@
         // Expose to window for global script access
         window.addStreamLine = addStreamLine;
         let programDataStore = [];
+        
+        // Expose programDataStore and state variables to window for global script access
+        Object.defineProperty(window, 'programDataStore', {
+            get: () => programDataStore,
+            set: (value) => { programDataStore = value; },
+            enumerable: true,
+            configurable: true
+        });
 
         // State management
         let sheetDataLoaded = false;
         let googleSheetsAuthenticated = false;
         let currentSpreadsheetId = null;
         let googleAccessToken = null;
+        
+        // Expose state variables to window for global script access
+        Object.defineProperty(window, 'sheetDataLoaded', {
+            get: () => sheetDataLoaded,
+            set: (value) => { sheetDataLoaded = value; },
+            enumerable: true,
+            configurable: true
+        });
+        
+        Object.defineProperty(window, 'currentSpreadsheetId', {
+            get: () => currentSpreadsheetId,
+            set: (value) => { currentSpreadsheetId = value; },
+            enumerable: true,
+            configurable: true
+        });
         
         // AI Agent Configuration - Use global config from non-module script
         function getAIConfig() {
@@ -2129,6 +2154,10 @@ Rules:
         }
         
         function updateProgress(percent, text) {
+            // Also expose to window for global script access
+            if (!window.updateProgress) {
+                window.updateProgress = updateProgress;
+            }
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
             if (progressBar) {
