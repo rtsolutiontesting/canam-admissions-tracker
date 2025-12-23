@@ -236,6 +236,12 @@
         let sheetDataLoaded = false;
         let googleSheetsAuthenticated = false;
         let currentSpreadsheetId = null;
+        let googleAccessToken = null;
+        
+        // Google OAuth Configuration
+        // User needs to set their OAuth Client ID
+        // Get it from: https://console.cloud.google.com/apis/credentials
+        const GOOGLE_OAUTH_CLIENT_ID = 'YOUR_OAUTH_CLIENT_ID_HERE'; // Replace with your OAuth Client ID
 
         // Extract spreadsheet ID helper
         function extractSpreadsheetId(url) {
@@ -243,6 +249,74 @@
             const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : null;
         }
+
+        // Google OAuth 2.0 Authorization
+        window.authorizeGoogleDrive = async function() {
+            const authButton = document.getElementById('authGoogleButton');
+            const authStatusDiv = document.getElementById('authStatusDiv');
+            
+            if (!GOOGLE_OAUTH_CLIENT_ID || GOOGLE_OAUTH_CLIENT_ID === 'YOUR_OAUTH_CLIENT_ID_HERE') {
+                alert('Please configure Google OAuth Client ID first!\n\n1. Go to: https://console.cloud.google.com/apis/credentials\n2. Create OAuth 2.0 Client ID (Web application)\n3. Add authorized JavaScript origins: ' + window.location.origin + '\n4. Update GOOGLE_OAUTH_CLIENT_ID in the code');
+                addStreamLine('error', 'OAuth Client ID not configured. Please set it up first.');
+                return;
+            }
+
+            try {
+                authButton.disabled = true;
+                authButton.textContent = '⏳ Authorizing...';
+                addStreamLine('info', 'Starting Google Drive authorization...');
+
+                // Initialize Google Identity Services
+                await new Promise((resolve) => {
+                    if (window.google && window.google.accounts) {
+                        resolve();
+                    } else {
+                        window.onGoogleLibraryLoad = resolve;
+                    }
+                });
+
+                // Request OAuth token
+                const tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_OAUTH_CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly',
+                    callback: (response) => {
+                        if (response.error) {
+                            addStreamLine('error', `Authorization failed: ${response.error}`);
+                            authButton.disabled = false;
+                            authButton.textContent = '🔐 Authorize Google Drive';
+                            return;
+                        }
+                        
+                        googleAccessToken = response.access_token;
+                        googleSheetsAuthenticated = true;
+                        
+                        authButton.style.background = '#4caf50';
+                        authButton.textContent = '✅ Google Drive Authorized';
+                        authButton.disabled = true;
+                        authStatusDiv.style.display = 'block';
+                        
+                        // Enable Step 1
+                        const loadButton = document.getElementById('loadDataButton');
+                        if (extractSpreadsheetId(document.getElementById('sheetUrl').value)) {
+                            loadButton.disabled = false;
+                        }
+                        
+                        addStreamLine('success', '✅ Google Drive authorized successfully!');
+                        addStreamLine('info', 'You can now load data from your sheets.');
+                        updateButtonStates();
+                    },
+                });
+
+                // Request access token
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+                
+            } catch (error) {
+                console.error('Auth error:', error);
+                addStreamLine('error', `Authorization error: ${error.message}`);
+                authButton.disabled = false;
+                authButton.textContent = '🔐 Authorize Google Drive';
+            }
+        };
 
         // Validate Google Sheets URL and enable Step 1 button
         function validateSheetUrl() {
@@ -254,8 +328,8 @@
             const url = sheetUrlInput.value.trim();
             const spreadsheetId = extractSpreadsheetId(url);
             
-            // Enable Step 1 if valid URL
-            if (spreadsheetId && url.includes('docs.google.com/spreadsheets')) {
+            // Enable Step 1 only if: URL is valid AND Google is authorized
+            if (spreadsheetId && url.includes('docs.google.com/spreadsheets') && googleSheetsAuthenticated) {
                 loadButton.disabled = false;
                 currentSpreadsheetId = spreadsheetId;
             } else {
@@ -269,20 +343,30 @@
             const loadButton = document.getElementById('loadDataButton');
             const authButton = document.getElementById('authButton');
             const syncButton = document.getElementById('syncButton');
-
-            // Step 1: Enabled when valid URL
+            const authGoogleButton = document.getElementById('authGoogleButton');
+            
+            // Google Drive auth button: always enabled (unless already authorized)
+            if (authGoogleButton) {
+                if (googleSheetsAuthenticated) {
+                    authGoogleButton.disabled = true;
+                } else {
+                    authGoogleButton.disabled = false;
+                }
+            }
+            
+            // Step 1: Enabled when valid URL AND Google authorized
             if (loadButton) {
-                loadButton.disabled = !currentSpreadsheetId;
+                loadButton.disabled = !(currentSpreadsheetId && googleSheetsAuthenticated);
             }
 
-            // Step 2: Enabled after Step 1 completes
+            // Step 2 (old auth button) - hidden now
             if (authButton) {
-                authButton.disabled = !sheetDataLoaded;
+                authButton.style.display = 'none';
             }
 
-            // Step 3: Enabled after Step 2 completes
+            // Step 3: Enabled after Step 1 completes (data loaded)
             if (syncButton) {
-                syncButton.disabled = !googleSheetsAuthenticated;
+                syncButton.disabled = !sheetDataLoaded;
             }
         }
 
