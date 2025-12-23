@@ -887,8 +887,12 @@
                 progressContainer.style.display = 'block';
                 tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 20px;">Loading data...</td></tr>';
 
-                updateProgress(10, 'Reading Excel file...');
-                addStreamLine('info', `Uploading file: ${fileName}`);
+                // Use window functions (exposed from module script)
+                const updateProgressFn = window.updateProgress || (() => {});
+                const addStreamLineFn = window.addStreamLine || (() => {});
+                
+                updateProgressFn(10, 'Reading Excel file...');
+                addStreamLineFn('info', `Uploading file: ${fileName}`);
 
                 // Read file as ArrayBuffer
                 const arrayBuffer = await file.arrayBuffer();
