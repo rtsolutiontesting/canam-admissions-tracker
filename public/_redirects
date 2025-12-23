@@ -7,3 +7,7 @@
 /privacy-policy /privacy-policy.html 200
 # NOTE: /login and /index.html are NOT redirected - access them directly
 
+# Cloudflare Functions routes
+/api/proxy /functions/proxy.js 200
+/api/extract /functions/api/extract.js 200
+

@@ -1559,7 +1559,7 @@ Rules:
                         const url = program.admissionsPageUrl || program.url;
                         if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
                             try {
-                                addStreamLine('info', `[${processedCount}] Fetching: ${url.substring(0, 60)}...`);
+                                addStreamLine('info', `[${processedCount}] Processing: ${url.substring(0, 60)}...`);
                                 
                                 // Safety: Add delay between requests to avoid blocking
                                 if (processedCount > 1) {
@@ -1567,202 +1567,102 @@ Rules:
                                     await new Promise(resolve => setTimeout(resolve, delay));
                                 }
                                 
-                                // Fetch HTML with safety headers
-                                let htmlContent = null;
-                                let fetchAttempts = 0;
-                                const maxRetries = 2; // Reduced since we have CORS proxy fallback
-                                let lastError = null;
+                                // USE PROPER BACKEND API - Server-side fetching + AI extraction
+                                // This is the LEGAL and RELIABLE solution - no CORS issues!
+                                const hasAIKey = (aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey);
                                 
-                                // Try direct fetch first
-                                try {
-                                    addStreamLine('info', `[${processedCount}] Attempting direct fetch...`);
-                                    // Enhanced headers to bypass blocking and handle cookies
-                                    const response = await fetch(url, {
-                                        method: 'GET',
-                                        headers: {
-                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                                            'Accept-Language': 'en-US,en;q=0.9',
-                                            'Accept-Encoding': 'gzip, deflate, br',
-                                            'Connection': 'keep-alive',
-                                            'Upgrade-Insecure-Requests': '1',
-                                            'Sec-Fetch-Dest': 'document',
-                                            'Sec-Fetch-Mode': 'navigate',
-                                            'Sec-Fetch-Site': 'none',
-                                            'Sec-Fetch-User': '?1',
-                                            'Cache-Control': 'max-age=0',
-                                            'DNT': '1',
-                                            'Referer': url.split('/').slice(0, 3).join('/') + '/'
-                                        },
-                                        mode: 'cors',
-                                        cache: 'no-cache',
-                                        redirect: 'follow',
-                                        credentials: 'omit' // Don't send cookies to avoid blocking
-                                    });
-                                    
-                                    if (!response.ok) {
-                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                                    }
-                                    
-                                    htmlContent = await response.text();
-                                    
-                                    if (!htmlContent || htmlContent.length < 100) {
-                                        throw new Error('Received empty or too short response');
-                                    }
-                                    
-                                    addStreamLine('success', `[${processedCount}] ✅ Fetched ${(htmlContent.length / 1024).toFixed(1)}KB from URL`);
-                                    
-                                } catch (fetchError) {
-                                    lastError = fetchError;
-                                    addStreamLine('warning', `[${processedCount}] Direct fetch failed: ${fetchError.message}`);
-                                    
-                                    // Check if it's a CORS error and try CORS proxy
-                                    if (fetchError.message.includes('Failed to fetch') || fetchError.name === 'TypeError' || fetchError.message.includes('CORS')) {
-                                        addStreamLine('info', `[${processedCount}] CORS blocked, trying CORS proxy...`);
-                                        try {
-                                            await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay before proxy
-                                            
-                                            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-                                            const proxyResponse = await fetch(proxyUrl, {
-                                                method: 'GET',
-                                                headers: {
-                                                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                                                },
-                                                mode: 'cors',
-                                                cache: 'no-cache'
-                                            });
-                                            
-                                            if (proxyResponse.ok) {
-                                                htmlContent = await proxyResponse.text();
-                                                if (htmlContent && htmlContent.length > 100) {
-                                                    addStreamLine('success', `[${processedCount}] ✅ Fetched via CORS proxy: ${(htmlContent.length / 1024).toFixed(1)}KB`);
-                                                } else {
-                                                    throw new Error('Proxy returned empty or too short response');
-                                                }
-                                            } else {
-                                                throw new Error(`Proxy returned HTTP ${proxyResponse.status}`);
-                                            }
-                                        } catch (proxyError) {
-                                            lastError = proxyError;
-                                            addStreamLine('warning', `[${processedCount}] CORS proxy failed: ${proxyError.message}`);
-                                            
-                                            // Try AI Agent as final fallback
-                                            const hasAIKey = (aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey);
-                                            if (hasAIKey) {
-                                                addStreamLine('info', `[${processedCount}] Trying AI Agent (${aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'})...`);
-                                                try {
-                                                    // Use AI to fetch and extract directly from URL
-                                                    const aiExtracted = await extractWithAI('', program.programName || program.program, program.universityName || program.university, url);
-                                                    
-                                                    // Update program with AI-extracted data
-                                                    program.admissionDeadline_found = aiExtracted.admissionDeadline || 'NOT_FOUND';
-                                                    program.casSubmissionDeadline_found = aiExtracted.casDeadline || 'NOT_FOUND';
-                                                    program.intakesAvailable = aiExtracted.intakesAvailable || 'NOT_FOUND';
-                                                    program.errorMessage = '';
-                                                    program.checkedDate = new Date().toISOString().split('T')[0];
-                                                    program.remarks = aiExtracted.remarks || 'Extracted via AI Agent';
-                                                    program.intakeStatus = aiExtracted.intakeStatus || 'open';
-                                                    program.intakeOffered = aiExtracted.intakesAvailable || 'NOT_FOUND';
-                                                    program.applicationDeadline = aiExtracted.admissionDeadline || 'NOT_FOUND';
-                                                    program.casDeadline = aiExtracted.casDeadline || 'NOT_FOUND';
-                                                    program.changeType = 'CHANGED';
-                                                    program.lastChecked = new Date().toISOString();
-                                                    
-                                                    successCount++;
-                                                    addStreamLine('success', `✅ [${processedCount}] AI Agent extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}`);
-                                                    continue; // Skip to next program
-                                                } catch (aiError) {
-                                                    addStreamLine('error', `[${processedCount}] AI Agent also failed: ${aiError.message}`);
-                                                    throw new Error(`All methods failed. Last: ${aiError.message}`);
-                                                }
-                                            } else {
-                                                throw new Error('CORS blocked and AI Agent not configured. Please configure AI Agent in "Use AI Agent" menu.');
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if (!htmlContent) {
-                                    // Try Cloudflare Function proxy first
-                                    addStreamLine('info', `[${processedCount}] Trying Cloudflare Function proxy...`);
+                                if (hasAIKey) {
+                                    // Use backend API for proper extraction (server-side, no CORS)
+                                    addStreamLine('info', `[${processedCount}] Using backend API with AI extraction (${aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'})...`);
                                     try {
-                                        const proxyFunctionUrl = `/functions/proxy?url=${encodeURIComponent(url)}`;
-                                        const proxyResponse = await fetch(proxyFunctionUrl, {
-                                            method: 'GET',
-                                            mode: 'cors',
-                                            cache: 'no-cache'
+                                        const apiResponse = await fetch('/api/extract', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({
+                                                url: url,
+                                                programName: program.programName || program.program,
+                                                universityName: program.universityName || program.university,
+                                                aiProvider: aiProvider,
+                                                apiKey: aiProvider === 'gemini' ? geminiApiKey : openaiApiKey
+                                            })
                                         });
                                         
-                                        if (proxyResponse.ok) {
-                                            htmlContent = await proxyResponse.text();
-                                            if (htmlContent && htmlContent.length > 100) {
-                                                addStreamLine('success', `[${processedCount}] ✅ Fetched via Cloudflare Function: ${(htmlContent.length / 1024).toFixed(1)}KB`);
-                                            } else {
-                                                throw new Error('Proxy returned empty response');
-                                            }
-                                        } else {
-                                            throw new Error(`Proxy function returned HTTP ${proxyResponse.status}`);
+                                        if (!apiResponse.ok) {
+                                            const errorData = await apiResponse.json().catch(() => ({ error: `HTTP ${apiResponse.status}` }));
+                                            throw new Error(errorData.error || `API returned HTTP ${apiResponse.status}`);
                                         }
-                                    } catch (cfProxyError) {
-                                        addStreamLine('warning', `[${processedCount}] Cloudflare Function proxy failed: ${cfProxyError.message}`);
                                         
-                                        // Try AI Agent as final fallback
-                                        const hasAIKey = (aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey);
-                                        if (hasAIKey) {
-                                            addStreamLine('info', `[${processedCount}] Using AI Agent (${aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'})...`);
-                                            try {
-                                                const aiExtracted = await extractWithAI('', program.programName || program.program, program.universityName || program.university, url);
-                                                
-                                                program.admissionDeadline_found = aiExtracted.admissionDeadline || 'NOT_FOUND';
-                                                program.casSubmissionDeadline_found = aiExtracted.casDeadline || 'NOT_FOUND';
-                                                program.intakesAvailable = aiExtracted.intakesAvailable || 'NOT_FOUND';
-                                                program.errorMessage = '';
-                                                program.checkedDate = new Date().toISOString().split('T')[0];
-                                                program.remarks = aiExtracted.remarks || 'Extracted via AI Agent';
-                                                program.intakeStatus = aiExtracted.intakeStatus || 'open';
-                                                program.intakeOffered = aiExtracted.intakesAvailable || 'NOT_FOUND';
-                                                program.applicationDeadline = aiExtracted.admissionDeadline || 'NOT_FOUND';
-                                                program.casDeadline = aiExtracted.casDeadline || 'NOT_FOUND';
-                                                program.changeType = 'CHANGED';
-                                                program.lastChecked = new Date().toISOString();
-                                                
-                                                successCount++;
-                                                addStreamLine('success', `✅ [${processedCount}] AI Agent extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}`);
-                                                continue; // Skip to next program
-                                            } catch (aiError) {
-                                                throw new Error(`All methods failed. AI Agent error: ${aiError.message}`);
-                                            }
+                                        const extracted = await apiResponse.json();
+                                        
+                                        // Update program with extracted data
+                                        program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
+                                        program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
+                                        program.intakesAvailable = extracted.intakesAvailable || 'NOT_FOUND';
+                                        program.errorMessage = extracted.errorMessage || '';
+                                        program.checkedDate = new Date().toISOString().split('T')[0];
+                                        program.remarks = extracted.remarks || 'Extracted via backend API + AI';
+                                        program.intakeStatus = extracted.intakeStatus || 'open';
+                                        program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
+                                        program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
+                                        program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
+                                        program.changeType = 'CHANGED';
+                                        program.lastChecked = new Date().toISOString();
+                                        
+                                        successCount++;
+                                        addStreamLine('success', `✅ [${processedCount}] Backend API extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}, Intakes: ${program.intakesAvailable}`);
+                                        continue; // Skip to next program
+                                    } catch (apiError) {
+                                        addStreamLine('error', `[${processedCount}] Backend API failed: ${apiError.message}. Falling back to pattern matching...`);
+                                        // Fall through to pattern matching below
+                                    }
+                                } else {
+                                    addStreamLine('warning', `[${processedCount}] AI Agent not configured. Configure in "Use AI Agent" menu for reliable extraction.`);
+                                }
+                                
+                                // Fallback: Try to fetch HTML for pattern matching (if AI not configured or API failed)
+                                let htmlContent = null;
+                                try {
+                                    addStreamLine('info', `[${processedCount}] Attempting to fetch HTML for pattern matching...`);
+                                    const proxyFunctionUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+                                    const proxyResponse = await fetch(proxyFunctionUrl, {
+                                        method: 'GET',
+                                        mode: 'cors',
+                                        cache: 'no-cache'
+                                    });
+                                    
+                                    if (proxyResponse.ok) {
+                                        htmlContent = await proxyResponse.text();
+                                        if (htmlContent && htmlContent.length > 100) {
+                                            addStreamLine('success', `[${processedCount}] ✅ HTML fetched: ${(htmlContent.length / 1024).toFixed(1)}KB`);
                                         } else {
-                                            throw lastError || new Error('Failed to fetch HTML - CORS blocked. Configure AI Agent in "Use AI Agent" menu for automatic fallback.');
+                                            htmlContent = null;
                                         }
                                     }
+                                } catch (fetchError) {
+                                    addStreamLine('warning', `[${processedCount}] HTML fetch failed: ${fetchError.message}`);
                                 }
                                 
                                 // Extract data from HTML content (pattern matching)
-                                const extracted = extractDataFromContent(
-                                    htmlContent,
-                                    program.programName || program.program,
-                                    program.universityName || program.university,
-                                    url
-                                );
-                                
-                                // If pattern matching didn't find much, try AI as enhancement
-                                if ((extracted.admissionDeadline === 'NOT_FOUND' || extracted.intakesAvailable === 'NOT_FOUND') && 
-                                    ((aiProvider === 'gemini' && geminiApiKey) || (aiProvider === 'openai' && openaiApiKey))) {
-                                    addStreamLine('info', `[${processedCount}] Pattern matching incomplete, enhancing with AI Agent...`);
-                                    try {
-                                        const aiEnhanced = await extractWithAI(htmlContent, program.programName || program.program, program.universityName || program.university, url);
-                                        
-                                        // Use AI results if they're better
-                                        if (aiEnhanced.admissionDeadline !== 'NOT_FOUND') extracted.admissionDeadline = aiEnhanced.admissionDeadline;
-                                        if (aiEnhanced.casDeadline !== 'NOT_FOUND') extracted.casDeadline = aiEnhanced.casDeadline;
-                                        if (aiEnhanced.intakesAvailable !== 'NOT_FOUND') extracted.intakesAvailable = aiEnhanced.intakesAvailable;
-                                        if (aiEnhanced.remarks && aiEnhanced.remarks !== 'NOT_FOUND') extracted.remarks = aiEnhanced.remarks;
-                                        
-                                        addStreamLine('success', `[${processedCount}] ✅ AI enhancement completed`);
-                                    } catch (aiError) {
-                                        addStreamLine('warning', `[${processedCount}] AI enhancement failed, using pattern matching results`);
-                                    }
+                                let extracted;
+                                if (htmlContent) {
+                                    extracted = extractDataFromContent(
+                                        htmlContent,
+                                        program.programName || program.program,
+                                        program.universityName || program.university,
+                                        url
+                                    );
+                                } else {
+                                    // No HTML available - return NOT_FOUND
+                                    extracted = {
+                                        admissionDeadline: 'NOT_FOUND',
+                                        casDeadline: 'NOT_FOUND',
+                                        intakesAvailable: 'NOT_FOUND',
+                                        intakeStatus: 'NOT_FOUND',
+                                        errorMessage: 'Unable to fetch HTML. Configure AI Agent for reliable extraction.',
+                                        remarks: 'HTML fetch failed. Use AI Agent for better results.'
+                                    };
                                 }
                                 
                                 // Update program with extracted data
@@ -1771,7 +1671,7 @@ Rules:
                                 program.intakesAvailable = extracted.intakesAvailable || 'NOT_FOUND';
                                 program.errorMessage = extracted.errorMessage || '';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
-                                program.remarks = extracted.remarks || 'Data extracted successfully';
+                                program.remarks = extracted.remarks || 'Data extracted via pattern matching';
                                 
                                 // Keep old fields for compatibility
                                 program.intakeStatus = extracted.intakeStatus || 'open';
