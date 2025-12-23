@@ -635,6 +635,72 @@
                 alert('Logout failed. Please try again.');
             }
         };
+        // Statistics tracking
+        let syncStats = {
+            urlsScanned: 0,
+            programsFound: 0,
+            intakesFound: 0,
+            deadlinesFound: 0,
+            remarksFound: 0,
+            urlsBlocked: 0,
+            errorMessages: 0
+        };
+        
+        // Update statistics with animation
+        function updateStat(statId, value) {
+            const element = document.getElementById(statId);
+            if (!element) return;
+            
+            const currentValue = parseInt(element.textContent) || 0;
+            const targetValue = value;
+            
+            if (currentValue === targetValue) return;
+            
+            element.classList.add('updating');
+            animateValue(element, currentValue, targetValue, 500);
+            element.setAttribute('data-target', targetValue);
+            
+            setTimeout(() => {
+                element.classList.remove('updating');
+            }, 500);
+        }
+        
+        // Animate number counting
+        function animateValue(element, start, end, duration) {
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.floor(current);
+            }, 16);
+        }
+        
+        // Reset statistics
+        function resetStats() {
+            syncStats = {
+                urlsScanned: 0,
+                programsFound: 0,
+                intakesFound: 0,
+                deadlinesFound: 0,
+                remarksFound: 0,
+                urlsBlocked: 0,
+                errorMessages: 0
+            };
+            updateStat('statUrlsScanned', 0);
+            updateStat('statProgramsFound', 0);
+            updateStat('statIntakesFound', 0);
+            updateStat('statDeadlinesFound', 0);
+            updateStat('statRemarksFound', 0);
+            updateStat('statUrlsBlocked', 0);
+            updateStat('statErrorMessages', 0);
+        }
+        
         function addStreamLine(type, message) {
             const stream = document.getElementById('executionStream');
             const timestamp = new Date().toLocaleTimeString();
