@@ -169,7 +169,18 @@
                 <div id="dataTableContainer">
                     <table>
                         <thead>
-                            <tr><th>UNIVERSITY</th><th>PROGRAM</th><th>STATUS</th><th>DEADLINE</th><th>LOG</th></tr>
+                            <tr>
+                                <th>Sr</th>
+                                <th>universityName</th>
+                                <th>Location</th>
+                                <th>programName</th>
+                                <th>admissionsPageUrl</th>
+                                <th>admissionDeadline_found</th>
+                                <th>casSubmissionDeadline_found</th>
+                                <th>errorMessage</th>
+                                <th>checkedDate</th>
+                                <th>remarks</th>
+                            </tr>
                         </thead>
                         <tbody id="dataTableBody">
                             <tr><td colspan="5" style="text-align: center; padding: 40px;">No data available. Run sync to load programs.</td></tr>
@@ -586,11 +597,16 @@
                 }
 
                 html += '<tr>';
+                html += `<td>${srNumber}</td>`;
                 html += `<td>${escapeHtml(university)}</td>`;
+                html += `<td>${escapeHtml(location)}</td>`;
                 html += `<td>${escapeHtml(program)}</td>`;
-                html += `<td><span class="status-badge ${statusClass}">${statusText}</span></td>`;
-                html += `<td>${escapeHtml(deadline)}</td>`;
-                html += `<td><span class="log-icon">✓</span></td>`;
+                html += `<td><a href="${escapeHtml(url)}" target="_blank" style="color: #2196f3; text-decoration: underline;">${escapeHtml(url.length > 50 ? url.substring(0, 50) + '...' : url)}</a></td>`;
+                html += `<td>${escapeHtml(deadline !== 'Not extracted yet' ? deadline : 'NOT_FOUND')}</td>`;
+                html += `<td>${escapeHtml((casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND')}</td>`;
+                html += `<td style="color: ${programDataStore[programDataStore.length - 1].errorMessage ? '#f44336' : '#4caf50'};">${escapeHtml(programDataStore[programDataStore.length - 1].errorMessage || '')}</td>`;
+                html += `<td>${new Date().toISOString().split('T')[0]}</td>`;
+                html += `<td>${escapeHtml((alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : '')}</td>`;
                 html += '</tr>';
                 
                 // Log first few rows for debugging
@@ -1211,7 +1227,7 @@
                     alert('No data available to export. Please run sync first.');
                     return;
                 }
-                const headers = ['University', 'Program', 'Country', 'Admissions URL', 'Intake Offered', 'Intake Status', 'Application Deadline', 'CAS Deadline (UK)', 'I-20 Deadline (USA)', 'Admission Alerts/Notes', 'Change Type', 'Last Checked (ISO)'];
+                const headers = ['Sr', 'universityName', 'Location', 'programName', 'admissionsPageUrl', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'errorMessage', 'checkedDate', 'remarks'];
                 const csvRows = [headers.join(',')];
                 dataToExport.forEach(item => {
                     const row = [
