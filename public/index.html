@@ -1263,26 +1263,48 @@ Rules:
             const headers = nonEmptyRows[0].map(h => (h || '').toString().trim().toLowerCase());
             addStreamLine('info', `Headers: ${headers.slice(0, 5).join(', ')}${headers.length > 5 ? '...' : ''}`);
 
-            // Find column indices
-            const getColumnIndex = (searchTerms) => {
-                for (const term of searchTerms) {
-                    const idx = headers.findIndex(h => h.includes(term));
-                    if (idx >= 0) return idx;
-                }
-                return -1;
-            };
+            // Use column mapping if available (for Excel files)
+            let universityIdx, programIdx, countryIdx, locationIdx, urlIdx, statusIdx, deadlineIdx, intakeOfferedIdx, casDeadlineIdx, i20DeadlineIdx, alertsIdx;
+            
+            if (source === 'excel' && window.excelColumnMapping) {
+                // Use saved column mapping
+                universityIdx = window.excelColumnMapping.universityName !== undefined ? window.excelColumnMapping.universityName : -1;
+                programIdx = window.excelColumnMapping.programName !== undefined ? window.excelColumnMapping.programName : -1;
+                countryIdx = window.excelColumnMapping.country !== undefined ? window.excelColumnMapping.country : -1;
+                locationIdx = window.excelColumnMapping.location !== undefined ? window.excelColumnMapping.location : -1;
+                urlIdx = window.excelColumnMapping.admissionsPageUrl !== undefined ? window.excelColumnMapping.admissionsPageUrl : -1;
+                statusIdx = window.excelColumnMapping.intakeStatus !== undefined ? window.excelColumnMapping.intakeStatus : -1;
+                deadlineIdx = window.excelColumnMapping.admissionDeadline_found !== undefined ? window.excelColumnMapping.admissionDeadline_found : -1;
+                intakeOfferedIdx = window.excelColumnMapping.intakesAvailable !== undefined ? window.excelColumnMapping.intakesAvailable : -1;
+                casDeadlineIdx = window.excelColumnMapping.casSubmissionDeadline_found !== undefined ? window.excelColumnMapping.casSubmissionDeadline_found : -1;
+                i20DeadlineIdx = window.excelColumnMapping.i20Deadline_found !== undefined ? window.excelColumnMapping.i20Deadline_found : -1;
+                alertsIdx = window.excelColumnMapping.remarks !== undefined ? window.excelColumnMapping.remarks : -1;
+                
+                addStreamLine('info', `Using custom column mapping: University=${universityIdx}, Program=${programIdx}, URL=${urlIdx}`);
+            } else {
+                // Auto-detect columns (fallback for Google Sheets or unmapped Excel)
+                const getColumnIndex = (searchTerms) => {
+                    for (const term of searchTerms) {
+                        const idx = headers.findIndex(h => h.includes(term));
+                        if (idx >= 0) return idx;
+                    }
+                    return -1;
+                };
 
-            const universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
-            const programIdx = getColumnIndex(['programname', 'program', 'program name']);
-            const countryIdx = getColumnIndex(['country']);
-            const locationIdx = getColumnIndex(['location', 'campus', 'campus location']);
-            const urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
-            const statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
-            const deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
-            const intakeOfferedIdx = getColumnIndex(['intake', 'intake offered', 'intakeoffered']);
-            const casDeadlineIdx = getColumnIndex(['cas', 'cas deadline', 'casdeadline']);
-            const i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline', 'i20deadline']);
-            const alertsIdx = getColumnIndex(['alert', 'note', 'admission alert', 'admissionalerts', 'notes']);
+                universityIdx = getColumnIndex(['universityname', 'university', 'university name']);
+                programIdx = getColumnIndex(['programname', 'program', 'program name']);
+                countryIdx = getColumnIndex(['country']);
+                locationIdx = getColumnIndex(['location', 'campus', 'campus location']);
+                urlIdx = getColumnIndex(['admissionspageurl', 'admissions page url', 'url', 'admission url']);
+                statusIdx = getColumnIndex(['status', 'intake status', 'intakestatus']);
+                deadlineIdx = getColumnIndex(['deadline', 'application deadline', 'applicationdeadline']);
+                intakeOfferedIdx = getColumnIndex(['intake', 'intake offered', 'intakeoffered']);
+                casDeadlineIdx = getColumnIndex(['cas', 'cas deadline', 'casdeadline']);
+                i20DeadlineIdx = getColumnIndex(['i-20', 'i20', 'i-20 deadline', 'i20deadline']);
+                alertsIdx = getColumnIndex(['alert', 'note', 'admission alert', 'admissionalerts', 'notes']);
+                
+                addStreamLine('info', `Auto-detected columns: University=${universityIdx}, Program=${programIdx}, URL=${urlIdx}`);
+            }
             
             addStreamLine('info', `Column indices - University: ${universityIdx}, Program: ${programIdx}, Country: ${countryIdx}, URL: ${urlIdx}`);
 
