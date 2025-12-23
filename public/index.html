@@ -1165,63 +1165,10 @@
                 updateProgress(100, `✅ Sync complete! Processed ${processedCount} programs`);
                 addStreamLine('success', `✅ Sync Complete: ${successCount} successful, ${errorCount} errors`);
                 addStreamLine('info', 'Data updated in table. You can download CSV to see all changes.');
-
-                // Process and display data
-                if (rows.length > 1) {
-                    const headers = rows[0].map(h => (h || '').trim().toLowerCase());
-                    const getColumnIndex = (searchTerms) => {
-                        for (const term of searchTerms) {
-                            const idx = headers.findIndex(h => h.includes(term));
-                            if (idx >= 0) return idx;
-                        }
-                        return -1;
-                    };
-
-                    const universityIdx = getColumnIndex(['university', 'university name']);
-                    const programIdx = getColumnIndex(['program', 'program name']);
-                    const statusIdx = getColumnIndex(['status', 'intake status']);
-                    const deadlineIdx = getColumnIndex(['deadline', 'application deadline']);
-
-                    programDataStore = [];
-                    let html = '';
-
-                    for (let i = 1; i < rows.length; i++) {
-                        const row = rows[i];
-                        if (!row || row.length === 0) continue;
-
-                        const university = (universityIdx >= 0 && row[universityIdx]) ? row[universityIdx].trim() : 'N/A';
-                        const program = (programIdx >= 0 && row[programIdx]) ? row[programIdx].trim() : 'N/A';
-                        const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].trim().toLowerCase() : 'unknown';
-                        const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx].trim() : '-';
-
-                        programDataStore.push({
-                            university, program, status, deadline,
-                            intakeOffered: 'NOT_FOUND', intakeStatus: status,
-                            applicationDeadline: deadline, casDeadline: 'NOT_FOUND',
-                            i20Deadline: 'NOT_FOUND', admissionAlerts: 'NOT_FOUND',
-                            changeType: 'UNKNOWN', lastChecked: new Date().toISOString()
-                        });
-
-                        const statusClass = status === 'open' ? 'status-open' : 
-                                          status === 'closed' ? 'status-closed' : 'status-pending';
-                        html += `<tr>
-                            <td>${escapeHtml(university)}</td>
-                            <td>${escapeHtml(program)}</td>
-                            <td><span class="status-badge ${statusClass}">${status.toUpperCase()}</span></td>
-                            <td>${escapeHtml(deadline)}</td>
-                            <td><span class="log-icon">✓</span></td>
-                        </tr>`;
-                    }
-
-                    tbody.innerHTML = html;
-                }
-
-                updateProgress(100, '✅ Sync completed!');
-                addStreamLine('success', `✅ Sync completed! Processed ${programDataStore.length} programs`);
                 
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
-                }, 2000);
+                }, 3000);
 
             } catch (error) {
                 console.error('Sync error:', error);
