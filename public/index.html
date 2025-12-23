@@ -9,24 +9,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 280px; background: #1e3a5f; color: white; display: flex; flex-direction: column; height: 100vh; }
-        .sidebar-header { padding: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-logo { width: 32px; height: 32px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .sidebar-nav { flex: 1; padding: 20px 0; }
-        .nav-item { padding: 15px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        /* Top Navigation Bar */
+        .top-navbar { background: #1e3a5f; color: white; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; height: 70px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000; }
+        .navbar-left { display: flex; align-items: center; gap: 20px; }
+        .navbar-logo { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 18px; }
+        .navbar-logo-icon { width: 32px; height: 32px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #1e3a5f; }
+        .navbar-nav { display: flex; gap: 0; }
+        .nav-item { padding: 0 20px; height: 70px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.2s; border-bottom: 3px solid transparent; }
         .nav-item:hover { background: rgba(255,255,255,0.1); }
-        .nav-item.active { background: #2a4d7a; }
-        .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
-        .user-profile { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
-        .user-avatar { width: 40px; height: 40px; background: white; color: #1e3a5f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; }
-        .user-info { flex: 1; }
-        .user-email { font-size: 13px; font-weight: 600; }
-        .user-role { font-size: 11px; color: rgba(255,255,255,0.7); }
-        .logout-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; }
-        .logout-link:hover { color: white; }
+        .nav-item.active { background: rgba(255,255,255,0.1); border-bottom-color: white; }
+        .navbar-right { display: flex; align-items: center; gap: 20px; }
+        .user-profile-compact { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 36px; height: 36px; background: white; color: #1e3a5f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .user-info-compact { display: flex; flex-direction: column; }
+        .user-email { font-size: 12px; font-weight: 600; }
+        .user-role { font-size: 10px; color: rgba(255,255,255,0.7); }
+        .logout-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 12px; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; }
+        .logout-link:hover { background: rgba(255,255,255,0.1); color: white; }
         .main-content { flex: 1; display: flex; flex-direction: column; background: #f5f5f5; overflow-y: auto; }
-        .top-bar { padding: 20px 30px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+        .top-bar { padding: 15px 30px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
         .api-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666; }
         .status-dot { width: 8px; height: 8px; background: #4caf50; border-radius: 50%; }
         .version-info { font-size: 12px; color: #999; }
@@ -81,45 +83,48 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">🏛️</div>
-            <div style="font-weight: 600;">CANAM IAPPLY</div>
-        </div>
-        <div class="sidebar-nav">
-            <div class="nav-item active">
-                <span class="nav-icon">📊</span>
-                <span>Dashboard</span>
+    <!-- Top Navigation Bar -->
+    <div class="top-navbar">
+        <div class="navbar-left">
+            <div class="navbar-logo">
+                <div class="navbar-logo-icon">🏛️</div>
+                <span>CANAM IAPPLY</span>
             </div>
-            <div class="nav-item">
-                <span class="nav-icon">⏰</span>
-                <span>Scheduler</span>
+            <div class="navbar-nav">
+                <div class="nav-item active">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">⏰</span>
+                    <span>Scheduler</span>
+                </div>
             </div>
         </div>
-        <div class="sidebar-footer">
-            <div class="user-profile">
+        <div class="navbar-right">
+            <div class="api-status" style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <div class="status-dot" style="width: 6px; height: 6px; background: #4caf50; border-radius: 50%;"></div>
+                <span>Google API: Authorized</span>
+            </div>
+            <div class="user-profile-compact">
                 <div class="user-avatar" id="userAvatar">A</div>
-                <div class="user-info">
+                <div class="user-info-compact">
                     <div class="user-email" id="userEmail">admin@canamiapply.com</div>
                     <div class="user-role">ADMIN</div>
                 </div>
             </div>
-            <a href="#" class="logout-link" onclick="logout(); return false;">Logout Session</a>
+            <a href="#" class="logout-link" onclick="logout(); return false;">Logout</a>
+            <div class="version-info" style="font-size: 11px; color: rgba(255,255,255,0.7);">v2.5.0</div>
         </div>
     </div>
     <div class="main-content">
         <div class="top-bar">
-            <div></div>
+            <div class="dashboard-title" style="margin: 0; font-size: 24px;">Dashboard</div>
             <div style="display: flex; align-items: center; gap: 20px;">
-                <div class="api-status">
-                    <div class="status-dot"></div>
-                    <span>Google API: Authorized</span>
-                </div>
-                <div class="version-info">By RT | v2.4.0</div>
+                <div class="version-info">By RT</div>
             </div>
         </div>
         <div class="content-area">
-            <div class="dashboard-title">Dashboard</div>
             <div class="card">
                 <div class="card-title">WORKFLOW CONTROL</div>
                 <div id="authStatus" style="display: none;"></div>
@@ -175,6 +180,7 @@
                                 <th>Location</th>
                                 <th>programName</th>
                                 <th>admissionsPageUrl</th>
+                                <th>intakesAvailable</th>
                                 <th>admissionDeadline_found</th>
                                 <th>casSubmissionDeadline_found</th>
                                 <th>errorMessage</th>
@@ -576,6 +582,7 @@
                     location: location,
                     programName: program,
                     admissionsPageUrl: url,
+                    intakesAvailable: (intakeOfferedIdx >= 0 && row[intakeOfferedIdx]) ? row[intakeOfferedIdx] : 'NOT_FOUND',
                     admissionDeadline_found: deadline !== 'Not extracted yet' ? deadline : 'NOT_FOUND',
                     casSubmissionDeadline_found: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
                     errorMessage: '', // Will be filled during sync if error occurs
@@ -618,6 +625,7 @@
                 html += `<td>${escapeHtml(location)}</td>`;
                 html += `<td>${escapeHtml(program)}</td>`;
                 html += `<td><a href="${escapeHtml(url)}" target="_blank" style="color: #2196f3; text-decoration: underline;">${escapeHtml(url.length > 50 ? url.substring(0, 50) + '...' : url)}</a></td>`;
+                html += `<td>${escapeHtml((intakeOfferedIdx >= 0 && row[intakeOfferedIdx]) ? row[intakeOfferedIdx] : 'NOT_FOUND')}</td>`;
                 html += `<td>${escapeHtml(deadline !== 'Not extracted yet' ? deadline : 'NOT_FOUND')}</td>`;
                 html += `<td>${escapeHtml((casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND')}</td>`;
                 html += `<td style="color: ${programDataStore[programDataStore.length - 1].errorMessage ? '#f44336' : '#4caf50'};">${escapeHtml(programDataStore[programDataStore.length - 1].errorMessage || '')}</td>`;
@@ -898,6 +906,7 @@
                         location: location,
                         programName: program,
                         admissionsPageUrl: url,
+                        intakesAvailable: (intakeOfferedIdx >= 0 && row[intakeOfferedIdx]) ? row[intakeOfferedIdx] : 'NOT_FOUND',
                         admissionDeadline_found: deadline !== 'Not extracted yet' ? deadline : 'NOT_FOUND',
                         casSubmissionDeadline_found: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
                         errorMessage: '', // Will be filled during sync if error occurs
@@ -1157,19 +1166,28 @@
                                 // Try direct fetch first
                                 try {
                                     addStreamLine('info', `[${processedCount}] Attempting direct fetch...`);
+                                    // Enhanced headers to bypass blocking and handle cookies
                                     const response = await fetch(url, {
                                         method: 'GET',
                                         headers: {
                                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
                                             'Accept-Language': 'en-US,en;q=0.9',
+                                            'Accept-Encoding': 'gzip, deflate, br',
                                             'Connection': 'keep-alive',
                                             'Upgrade-Insecure-Requests': '1',
-                                            'Cache-Control': 'max-age=0'
+                                            'Sec-Fetch-Dest': 'document',
+                                            'Sec-Fetch-Mode': 'navigate',
+                                            'Sec-Fetch-Site': 'none',
+                                            'Sec-Fetch-User': '?1',
+                                            'Cache-Control': 'max-age=0',
+                                            'DNT': '1',
+                                            'Referer': url.split('/').slice(0, 3).join('/') + '/'
                                         },
                                         mode: 'cors',
                                         cache: 'no-cache',
-                                        redirect: 'follow'
+                                        redirect: 'follow',
+                                        credentials: 'omit' // Don't send cookies to avoid blocking
                                     });
                                     
                                     if (!response.ok) {
@@ -1236,12 +1254,14 @@
                                 // Update program with extracted data
                                 program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
+                                program.intakesAvailable = extracted.intakesAvailable || 'NOT_FOUND';
                                 program.errorMessage = extracted.errorMessage || '';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
                                 program.remarks = extracted.remarks || 'Data extracted successfully';
                                 
                                 // Keep old fields for compatibility
                                 program.intakeStatus = extracted.intakeStatus || 'open';
+                                program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
                                 program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
                                 program.changeType = 'CHANGED';
@@ -1325,6 +1345,7 @@
                     const loc = program.location || 'NOT_FOUND'; // Use campus location, not country
                     const progName = program.programName || program.program || 'N/A';
                     const admUrl = program.admissionsPageUrl || program.url || '';
+                    const intakesAvail = program.intakesAvailable || program.intakeOffered || 'NOT_FOUND';
                     const admDeadline = program.admissionDeadline_found || program.applicationDeadline || deadline || 'NOT_FOUND';
                     const casDeadline = program.casSubmissionDeadline_found || program.casDeadline || 'NOT_FOUND';
                     const errMsg = program.errorMessage || '';
@@ -1337,6 +1358,7 @@
                     html += `<td>${escapeHtml(loc)}</td>`;
                     html += `<td>${escapeHtml(progName)}</td>`;
                     html += `<td><a href="${escapeHtml(admUrl)}" target="_blank" style="color: #2196f3; text-decoration: underline;">${escapeHtml(admUrl.length > 50 ? admUrl.substring(0, 50) + '...' : admUrl || 'N/A')}</a></td>`;
+                    html += `<td>${escapeHtml(intakesAvail)}</td>`;
                     html += `<td>${escapeHtml(admDeadline)}</td>`;
                     html += `<td>${escapeHtml(casDeadline)}</td>`;
                     html += `<td style="color: ${errMsg ? '#f44336' : '#4caf50'}; font-size: 12px;">${escapeHtml(errMsg)}</td>`;
@@ -1395,7 +1417,7 @@
                     alert('No data available to export. Please run sync first.');
                     return;
                 }
-                const headers = ['Sr', 'universityName', 'Location', 'programName', 'admissionsPageUrl', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'errorMessage', 'checkedDate', 'remarks'];
+                const headers = ['Sr', 'universityName', 'Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'errorMessage', 'checkedDate', 'remarks'];
                 const csvRows = [headers.join(',')];
                 dataToExport.forEach((item, index) => {
                     const row = [
@@ -1404,6 +1426,7 @@
                         escapeCSV(item.location || item.country || 'NOT_FOUND'),
                         escapeCSV(item.programName || item.program || ''),
                         escapeCSV(item.admissionsPageUrl || item.url || ''),
+                        escapeCSV(item.intakesAvailable || item.intakeOffered || 'NOT_FOUND'),
                         escapeCSV(item.admissionDeadline_found || item.applicationDeadline || item.deadline || 'NOT_FOUND'),
                         escapeCSV(item.casSubmissionDeadline_found || item.casDeadline || 'NOT_FOUND'),
                         escapeCSV(item.errorMessage || ''),
@@ -1451,19 +1474,86 @@
             const result = {
                 admissionDeadline: 'NOT_FOUND',
                 casDeadline: 'NOT_FOUND',
+                intakesAvailable: 'NOT_FOUND',
                 intakeStatus: 'open',
                 remarks: '',
                 errorMessage: ''
             };
             
             try {
+                // Enhanced HTML parsing: Extract content from tabs, dropdowns, and hidden elements
+                let enhancedContent = htmlContent;
+                
+                // Extract content from hidden tabs
+                const hiddenTabContent = htmlContent.match(/<div[^>]*(?:aria-hidden|display:\s*none|hidden|tab-pane|tab-content)[^>]*>([\s\S]*?)<\/div>/gi);
+                if (hiddenTabContent) {
+                    hiddenTabContent.forEach(tab => {
+                        enhancedContent += ' ' + tab.replace(/<[^>]+>/g, ' ');
+                    });
+                }
+                
+                // Extract content from dropdowns/accordions
+                const dropdownContent = htmlContent.match(/<div[^>]*(?:dropdown|accordion|collapse|expand)[^>]*>([\s\S]*?)<\/div>/gi);
+                if (dropdownContent) {
+                    dropdownContent.forEach(dropdown => {
+                        enhancedContent += ' ' + dropdown.replace(/<[^>]+>/g, ' ');
+                    });
+                }
+                
+                // Extract content from data attributes
+                const dataAttributes = htmlContent.match(/data-[^=]*="([^"]*)"/gi);
+                if (dataAttributes) {
+                    dataAttributes.forEach(attr => {
+                        const match = attr.match(/="([^"]*)"/);
+                        if (match) enhancedContent += ' ' + match[1];
+                    });
+                }
+                
                 // Remove script and style tags to get cleaner text
-                const cleanContent = htmlContent
+                const cleanContent = enhancedContent
                     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
                     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
                     .replace(/<[^>]+>/g, ' ')
                     .replace(/\s+/g, ' ')
                     .toLowerCase();
+                
+                // Extract intakes available
+                const intakePatterns = [
+                    /(?:intake|intakes|available|offered)[\s:]*([^.!?]{0,200}(?:september|october|november|december|january|february|march|april|may|june|july|august|fall|spring|summer|winter|autumn|2024|2025|2026)[^.!?]{0,100})/gi,
+                    /(?:september|october|november|december|january|february|march|april|may|june|july|august|fall|spring|summer|winter|autumn)\s+\d{4}/gi,
+                    /\d{4}[\/\-]\d{2,4}/g,
+                    /(?:intake|intakes)[\s:]*([a-z0-9\s,]+(?:and|&)[a-z0-9\s,]+)/gi
+                ];
+                
+                let intakesFound = [];
+                for (const pattern of intakePatterns) {
+                    const matches = cleanContent.match(pattern);
+                    if (matches && matches.length > 0) {
+                        matches.forEach(match => {
+                            let intake = match.replace(/(?:intake|intakes|available|offered)[\s:]*/gi, '').trim();
+                            if (intake && intake.length > 3 && intake.length < 100) {
+                                intakesFound.push(intake);
+                            }
+                        });
+                    }
+                }
+                
+                // Search in highlighted/bolded text
+                const highlightedText = htmlContent.match(/<(?:strong|b|em|mark|highlight)[^>]*>([^<]+)<\/(?:strong|b|em|mark|highlight)>/gi);
+                if (highlightedText) {
+                    highlightedText.forEach(highlight => {
+                        const text = highlight.replace(/<[^>]+>/g, '').toLowerCase();
+                        if (text.match(/(?:september|october|november|december|january|february|march|april|may|june|july|august|fall|spring|summer|winter|autumn|2024|2025|2026)/)) {
+                            intakesFound.push(text);
+                        }
+                    });
+                }
+                
+                // Remove duplicates and format
+                intakesFound = [...new Set(intakesFound)];
+                if (intakesFound.length > 0) {
+                    result.intakesAvailable = intakesFound.slice(0, 3).join(', ');
+                }
                 
                 // More comprehensive date patterns
                 const datePatterns = [
