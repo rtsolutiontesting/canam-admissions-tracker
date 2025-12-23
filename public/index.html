@@ -564,8 +564,21 @@
                 const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].toLowerCase() : 'pending';
                 const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx] : 'Not extracted yet';
 
-                // Store for CSV
+                // Store for CSV - match exact column structure
+                const srNumber = processedCount; // Serial number
+                const location = country || 'NOT_FOUND'; // Location from country column
                 programDataStore.push({
+                    sr: srNumber,
+                    universityName: university,
+                    location: location,
+                    programName: program,
+                    admissionsPageUrl: url,
+                    admissionDeadline_found: deadline !== 'Not extracted yet' ? deadline : 'NOT_FOUND',
+                    casSubmissionDeadline_found: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
+                    errorMessage: '', // Will be filled during sync if error occurs
+                    checkedDate: new Date().toISOString().split('T')[0], // Date only (YYYY-MM-DD)
+                    remarks: (alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : '',
+                    // Keep old fields for backward compatibility
                     university: university,
                     program: program,
                     country: country,
@@ -578,7 +591,7 @@
                     casDeadline: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
                     i20Deadline: (i20DeadlineIdx >= 0 && row[i20DeadlineIdx]) ? row[i20DeadlineIdx] : 'NOT_FOUND',
                     admissionAlerts: (alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : 'NOT_FOUND',
-                    changeType: 'NEW', // New data from sheet
+                    changeType: 'NEW',
                     lastChecked: new Date().toISOString()
                 });
 
@@ -870,8 +883,21 @@
                     const status = (statusIdx >= 0 && row[statusIdx]) ? row[statusIdx].toLowerCase() : 'pending';
                     const deadline = (deadlineIdx >= 0 && row[deadlineIdx]) ? row[deadlineIdx] : 'Not extracted yet';
 
-                    // Store for CSV - include all available data
+                    // Store for CSV - match exact column structure
+                    const srNumber = processedCount; // Serial number
+                    const location = country || 'NOT_FOUND'; // Location from country column
                     programDataStore.push({
+                        sr: srNumber,
+                        universityName: university,
+                        location: location,
+                        programName: program,
+                        admissionsPageUrl: url,
+                        admissionDeadline_found: deadline !== 'Not extracted yet' ? deadline : 'NOT_FOUND',
+                        casSubmissionDeadline_found: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
+                        errorMessage: '', // Will be filled during sync if error occurs
+                        checkedDate: new Date().toISOString().split('T')[0], // Date only (YYYY-MM-DD)
+                        remarks: (alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : '',
+                        // Keep old fields for backward compatibility
                         university: university,
                         program: program,
                         country: country,
@@ -884,7 +910,7 @@
                         casDeadline: (casDeadlineIdx >= 0 && row[casDeadlineIdx]) ? row[casDeadlineIdx] : 'NOT_FOUND',
                         i20Deadline: (i20DeadlineIdx >= 0 && row[i20DeadlineIdx]) ? row[i20DeadlineIdx] : 'NOT_FOUND',
                         admissionAlerts: (alertsIdx >= 0 && row[alertsIdx]) ? row[alertsIdx] : 'NOT_FOUND',
-                        changeType: 'NEW', // New data from sheet
+                        changeType: 'NEW',
                         lastChecked: new Date().toISOString()
                     });
 
@@ -1105,22 +1131,44 @@
 
                     try {
                         // Extract data from URL (simplified version - you can enhance this)
-                        if (program.url && program.url !== 'N/A' && program.url !== 'NOT_FOUND' && program.url.startsWith('http')) {
-                            // Simulate extraction (replace with actual extraction logic)
-                            // For now, we'll update status to show processing
-                            program.intakeStatus = 'open'; // Placeholder - replace with actual extraction
-                            program.applicationDeadline = '2024-12-31'; // Placeholder
-                            program.changeType = 'CHANGED';
-                            program.lastChecked = new Date().toISOString();
-                            
-                            successCount++;
-                            addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.university}`);
+                        const url = program.admissionsPageUrl || program.url;
+                        if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
+                            try {
+                                // Simulate extraction (replace with actual extraction logic)
+                                // For now, we'll update fields to show processing
+                                program.admissionDeadline_found = '2024-12-31'; // Placeholder - replace with actual extraction
+                                program.casSubmissionDeadline_found = 'NOT_FOUND'; // Placeholder
+                                program.errorMessage = ''; // No error
+                                program.checkedDate = new Date().toISOString().split('T')[0];
+                                program.remarks = 'Data extracted successfully';
+                                
+                                // Keep old fields for compatibility
+                                program.intakeStatus = 'open';
+                                program.applicationDeadline = '2024-12-31';
+                                program.changeType = 'CHANGED';
+                                program.lastChecked = new Date().toISOString();
+                                
+                                successCount++;
+                                addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.universityName || program.university}`);
+                            } catch (error) {
+                                program.errorMessage = `Failed to extract: ${error.message}`;
+                                program.admissionDeadline_found = 'NOT_FOUND';
+                                program.casSubmissionDeadline_found = 'NOT_FOUND';
+                                program.checkedDate = new Date().toISOString().split('T')[0];
+                                errorCount++;
+                                addStreamLine('error', `❌ [${processedCount}] Extraction failed: ${program.universityName || program.university}`);
+                            }
                         } else {
+                            program.admissionDeadline_found = 'NOT_FOUND';
+                            program.casSubmissionDeadline_found = 'NOT_FOUND';
+                            program.errorMessage = 'No valid URL provided';
+                            program.checkedDate = new Date().toISOString().split('T')[0];
+                            program.remarks = 'URL missing or invalid';
                             program.intakeStatus = 'pending';
                             program.applicationDeadline = 'NOT_FOUND';
                             program.changeType = 'NEW';
                             errorCount++;
-                            addStreamLine('warning', `⚠️ [${processedCount}] No valid URL: ${program.university}`);
+                            addStreamLine('warning', `⚠️ [${processedCount}] No valid URL: ${program.universityName || program.university}`);
                         }
                     } catch (error) {
                         errorCount++;
