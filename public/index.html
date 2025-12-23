@@ -534,7 +534,7 @@
             if (!contentToExtract || contentToExtract.length < 100) {
                 // Fetch HTML via Cloudflare Function (server-side, no CORS)
                 try {
-                    const proxyFunctionUrl = `/functions/proxy?url=${encodeURIComponent(url)}`;
+                    const proxyFunctionUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
                     const proxyResponse = await fetch(proxyFunctionUrl, {
                         method: 'GET',
                         mode: 'cors',
