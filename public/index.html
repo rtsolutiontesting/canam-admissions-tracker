@@ -2479,6 +2479,8 @@ Rules:
                                     {
                                         campusLocation: program.location || extracted.campusLocation || 'NOT_FOUND',
                                         admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
+                                        admissionDeadline_found: extracted.admissionDeadline || 'NOT_FOUND',
+                                        applicationDeadline: extracted.admissionDeadline || 'NOT_FOUND',
                                         casDeadline: extracted.casDeadline || 'NOT_FOUND',
                                         i20Deadline: extracted.i20Deadline || 'NOT_FOUND',
                                         intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
@@ -2526,6 +2528,7 @@ Rules:
                         }
                         
                         program.intakeStatus = 'pending';
+                        program.admissionDeadline = 'ERROR';
                         program.applicationDeadline = 'ERROR';
                         program.changeType = 'NEW';
                         addStreamLine('error', `❌ [${processedCount}] Failed: ${program.university} - ${error.message}`);
