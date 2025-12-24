@@ -446,6 +446,13 @@ Rules:
       errorMessage: ''
     };
   } catch (error) {
+    // Preserve rate limit flag if present
+    if (error.isRateLimit || error.statusCode === 429) {
+      const rateLimitError = new Error(`OpenAI extraction failed: ${error.message}`);
+      rateLimitError.isRateLimit = true;
+      rateLimitError.statusCode = 429;
+      throw rateLimitError;
+    }
     throw new Error(`OpenAI extraction failed: ${error.message}`);
   }
 }

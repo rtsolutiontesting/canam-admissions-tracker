@@ -1814,19 +1814,43 @@ Rules:
             // Create natural language description
             const descriptions = [];
             
+            // Campus Location
+            if (extractedData.campusLocation && extractedData.campusLocation !== 'NOT_FOUND') {
+                descriptions.push(`Campus location: <strong>${escapeHtml(extractedData.campusLocation)}</strong>`);
+            }
+            
+            // Intake Status (important!)
+            if (extractedData.intakeStatus && extractedData.intakeStatus !== 'NOT_FOUND' && extractedData.intakeStatus !== 'open') {
+                const statusText = extractedData.intakeStatus === 'closed' ? '❌ Closed' : 
+                                 extractedData.intakeStatus === 'waitlist' ? '⏳ Waitlisted' : 
+                                 extractedData.intakeStatus === 'open' ? '✅ Open' : extractedData.intakeStatus;
+                descriptions.push(`Intake status: <strong>${escapeHtml(statusText)}</strong>`);
+            } else if (extractedData.intakeStatus === 'open') {
+                descriptions.push(`Intake status: <strong>✅ Open for applications</strong>`);
+            }
+            
+            // Intakes Available
             if (extractedData.intakesAvailable && extractedData.intakesAvailable !== 'NOT_FOUND') {
                 descriptions.push(`Found intake periods: <strong>${escapeHtml(extractedData.intakesAvailable)}</strong>`);
             }
             
+            // Admission Deadline
             if (extractedData.admissionDeadline && extractedData.admissionDeadline !== 'NOT_FOUND') {
                 descriptions.push(`Application deadline: <strong>${escapeHtml(extractedData.admissionDeadline)}</strong>`);
             }
             
+            // CAS Deadline (important for UK programs!)
             if (extractedData.casDeadline && extractedData.casDeadline !== 'NOT_FOUND') {
                 descriptions.push(`CAS submission deadline: <strong>${escapeHtml(extractedData.casDeadline)}</strong>`);
             }
             
-            if (extractedData.remarks && extractedData.remarks !== 'NOT_FOUND' && extractedData.remarks !== 'Data extracted via pattern matching') {
+            // I-20 Deadline (important for USA programs!)
+            if (extractedData.i20Deadline && extractedData.i20Deadline !== 'NOT_FOUND') {
+                descriptions.push(`I-20 deadline: <strong>${escapeHtml(extractedData.i20Deadline)}</strong>`);
+            }
+            
+            // Remarks
+            if (extractedData.remarks && extractedData.remarks !== 'NOT_FOUND' && extractedData.remarks !== 'Data extracted via pattern matching' && !extractedData.remarks.includes('Extracted via')) {
                 descriptions.push(`Additional notes: <strong>${escapeHtml(extractedData.remarks)}</strong>`);
             }
             
