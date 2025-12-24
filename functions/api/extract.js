@@ -269,8 +269,20 @@ University: ${universityName || 'Unknown'}
 Program: ${programName || 'Unknown'}
 URL: ${url}
 
-HTML Content:
-${htmlContent.substring(0, 30000)}
+HTML Content (comprehensive extraction - check ALL sections):
+${htmlContent.substring(0, 50000)}
+
+EXTRACTION STRATEGY (MANDATORY - Read like a human):
+1. Read the ENTIRE content systematically - check headings, paragraphs, lists, tables, divs, spans, labels, data attributes
+2. Check ALL date formats: "3 July 2026", "July 3, 2026", "03/07/2026", "2026-07-03", "3rd July 2026", "July 3rd, 2026"
+3. Look in ALL locations: visible text, hidden tabs, dropdowns, accordions, collapsed sections, data attributes
+4. For deadlines: Check if date appears BEFORE or AFTER the deadline text (both formats exist)
+5. For intakes: Look for "September 2024", "Fall 2024", "2024/25", "Jan 2025", "2024-09", etc.
+6. For campus: Check addresses, location mentions, "at [location]", "in [city]", campus names
+7. For status: ONLY use if EXPLICITLY stated - do NOT assume based on dates or other info
+8. Extract from highlighted/bolded text (often contains important deadlines/info)
+9. Check multiple passes - if first pattern doesn't match, try alternative patterns
+10. NO ASSUMPTIONS - if not found after thorough search, return NOT_FOUND
 
 Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
@@ -402,8 +414,20 @@ University: ${universityName || 'Unknown'}
 Program: ${programName || 'Unknown'}
 URL: ${url}
 
-HTML Content:
-${htmlContent.substring(0, 30000)}
+HTML Content (comprehensive extraction - check ALL sections):
+${htmlContent.substring(0, 50000)}
+
+EXTRACTION STRATEGY (MANDATORY - Read like a human):
+1. Read the ENTIRE content systematically - check headings, paragraphs, lists, tables, divs, spans, labels, data attributes
+2. Check ALL date formats: "3 July 2026", "July 3, 2026", "03/07/2026", "2026-07-03", "3rd July 2026", "July 3rd, 2026"
+3. Look in ALL locations: visible text, hidden tabs, dropdowns, accordions, collapsed sections, data attributes
+4. For deadlines: Check if date appears BEFORE or AFTER the deadline text (both formats exist)
+5. For intakes: Look for "September 2024", "Fall 2024", "2024/25", "Jan 2025", "2024-09", etc.
+6. For campus: Check addresses, location mentions, "at [location]", "in [city]", campus names
+7. For status: ONLY use if EXPLICITLY stated - do NOT assume based on dates or other info
+8. Extract from highlighted/bolded text (often contains important deadlines/info)
+9. Check multiple passes - if first pattern doesn't match, try alternative patterns
+10. NO ASSUMPTIONS - if not found after thorough search, return NOT_FOUND
 
 Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
