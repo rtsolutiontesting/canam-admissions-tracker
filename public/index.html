@@ -2443,6 +2443,7 @@ Rules:
                                 }
                                 
                                 // Update program with extracted data
+                                program.admissionDeadline = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
                                 program.i20Deadline_found = extracted.i20Deadline || 'NOT_FOUND';
