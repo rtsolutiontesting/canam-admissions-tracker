@@ -187,7 +187,11 @@ export async function onRequestPost(context) {
     try {
       if (aiProvider === 'pattern' || (!apiKey && !geminiApiKey)) {
         // Use pattern matching if explicitly requested or no AI keys available
+        console.log('[API] Using pattern matching mode');
+        console.log('[API] HTML content length:', cleanHtml.length);
+        console.log('[API] HTML content sample (first 500 chars):', cleanHtml.substring(0, 500));
         extractedData = extractWithPatternMatchingServer(cleanHtml, programName, universityName, url);
+        console.log('[API] Pattern matching result:', JSON.stringify(extractedData, null, 2));
       } else if (aiProvider === 'gemini') {
         extractedData = await extractWithGemini(cleanHtml, programName, universityName, url, apiKey);
       } else if (aiProvider === 'openai') {
