@@ -26,7 +26,7 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
-    const { url, programName, universityName, aiProvider = 'gemini', apiKey } = body;
+    const { url, programName, universityName, aiProvider = 'gemini', apiKey, geminiApiKey } = body;
 
     if (!url) {
       return new Response(JSON.stringify({ error: 'URL is required' }), {
@@ -181,15 +181,39 @@ export async function onRequestPost(context) {
     // Limit to 80KB for AI (increased from 50KB to capture more content)
     const cleanHtml = visibleText.substring(0, 80000);
 
-    // Step 3: Extract data using AI
+    // Step 3: Extract data using AI with automatic fallback
     let extractedData;
+    const { geminiApiKey } = body; // Get Gemini API key for fallback
     
-    if (aiProvider === 'gemini') {
-      extractedData = await extractWithGemini(cleanHtml, programName, universityName, url, apiKey);
-    } else if (aiProvider === 'openai') {
-      extractedData = await extractWithOpenAI(cleanHtml, programName, universityName, url, apiKey);
-    } else {
-      throw new Error(`Unsupported AI provider: ${aiProvider}`);
+    try {
+      if (aiProvider === 'gemini') {
+        extractedData = await extractWithGemini(cleanHtml, programName, universityName, url, apiKey);
+      } else if (aiProvider === 'openai') {
+        extractedData = await extractWithOpenAI(cleanHtml, programName, universityName, url, apiKey);
+      } else {
+        throw new Error(`Unsupported AI provider: ${aiProvider}`);
+      }
+    } catch (primaryError) {
+      // If OpenAI hits rate limit (429) and Gemini key is available, automatically fallback
+      if (aiProvider === 'openai' && primaryError.message.includes('429') && geminiApiKey) {
+        try {
+          return new Response(JSON.stringify({
+            ...(await extractWithGemini(cleanHtml, programName, universityName, url, geminiApiKey)),
+            fallbackUsed: true,
+            fallbackReason: 'OpenAI rate limit exceeded, used Gemini as fallback'
+          }), {
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        } catch (fallbackError) {
+          // If Gemini also fails, throw original error
+          throw primaryError;
+        }
+      }
+      // Re-throw if no fallback available or fallback failed
+      throw primaryError;
     }
 
     // Step 4: Return extracted data

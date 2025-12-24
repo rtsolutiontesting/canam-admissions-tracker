@@ -2124,7 +2124,8 @@ Rules:
                                                 programName: program.programName || program.program,
                                                 universityName: program.universityName || program.university,
                                                 aiProvider: config.aiProvider,
-                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey
+                                                apiKey: config.aiProvider === 'gemini' ? config.geminiApiKey : config.openaiApiKey,
+                                                geminiApiKey: config.geminiApiKey // Always send Gemini key for fallback
                                             })
                                         });
                                         
