@@ -404,6 +404,13 @@ Rules:
 
     if (!response.ok) {
       const errorText = await response.text();
+      // Check if it's a rate limit error (429)
+      if (response.status === 429) {
+        const error = new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+        error.isRateLimit = true;
+        error.statusCode = 429;
+        throw error;
+      }
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
