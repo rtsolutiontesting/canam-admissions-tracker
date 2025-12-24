@@ -252,10 +252,18 @@ async function extractWithGemini(htmlContent, programName, universityName, url, 
 {
   "admissionDeadline": "YYYY-MM-DD or NOT_FOUND",
   "casDeadline": "YYYY-MM-DD or NOT_FOUND",
+  "i20Deadline": "YYYY-MM-DD or NOT_FOUND",
   "intakesAvailable": "e.g., September 2024, Fall 2024, January 2025 or NOT_FOUND",
   "intakeStatus": "open/closed/waitlist/NOT_FOUND",
+  "campusLocation": "campus name or location or NOT_FOUND",
   "remarks": "any important notes or NOT_FOUND"
 }
+
+IMPORTANT CONTEXT:
+- Focus ONLY on information for INTERNATIONAL STUDENTS FROM INDIA
+- Look for location dropdowns, country selectors, or sections mentioning "India", "international students", "overseas students", "international applicants"
+- If the page has location/country dropdowns, prioritize information shown when "India" is selected
+- Extract deadlines and requirements specifically for international students requiring visas
 
 University: ${universityName || 'Unknown'}
 Program: ${programName || 'Unknown'}
@@ -270,15 +278,22 @@ Rules:
 3. If information not found, use "NOT_FOUND"
 4. Extract campus location from page (look for "campus", "location", address, city names)
 5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by"
-7. Check intake status: "open", "closed", "waitlist", or "NOT_FOUND"
-8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs)
-9. Look for I-20 deadlines specifically (USA programs)
-10. Check tabs, dropdowns, and hidden content for information
+6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
+7. INTAKE STATUS LOGIC (CRITICAL):
+   - If there is a future deadline date (deadline is in the future), the intake is likely "open"
+   - If text says "closed", "not accepting", "full", "no longer accepting", use "closed"
+   - If text says "waitlist", "waiting list", use "waitlist"
+   - If text says "early applications encouraged", "apply early", "accepting applications", use "open"
+   - If there's a deadline date but no explicit "closed" message, assume "open" (deadlines indicate open applications)
+   - Only use "closed" if explicitly stated or if deadline has passed
+8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs) - for international students
+9. Look for I-20 deadlines specifically (USA programs) - for international students
+10. Check tabs, dropdowns, location selectors, and hidden content for information
 11. Parse dates in various formats and convert to YYYY-MM-DD
 12. Extract multiple intakes if available (comma-separated)
 13. If page has multiple programs or campuses, populate multiplePrograms or multipleCampuses arrays
-14. Be thorough - check all sections of the page`;
+14. Be thorough - check all sections of the page, especially those mentioning "international", "India", "overseas", "visa"
+15. Prioritize information from sections specifically about international students or country-specific requirements`;
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -325,13 +340,43 @@ Rules:
 
     const extracted = JSON.parse(jsonMatch[0]);
     
+    // Post-process: If there's a future deadline and status is unclear, set to "open"
+    let intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check if any deadline is in the future
+    const deadlines = [
+      extracted.admissionDeadline,
+      extracted.casDeadline,
+      extracted.i20Deadline
+    ].filter(d => d && d !== 'NOT_FOUND');
+    
+    for (const deadline of deadlines) {
+      try {
+        const deadlineDate = new Date(deadline);
+        if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
+          // Future deadline found - if status is NOT_FOUND or unclear, set to "open"
+          if (intakeStatus === 'NOT_FOUND' || intakeStatus === '') {
+            intakeStatus = 'open';
+          }
+          break;
+        }
+      } catch (e) {
+        // Invalid date format, skip
+      }
+    }
+    
     return {
       admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
       casDeadline: extracted.casDeadline || 'NOT_FOUND',
       i20Deadline: extracted.i20Deadline || 'NOT_FOUND',
       intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
-      intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
+      intakeStatus: intakeStatus,
       campusLocation: extracted.campusLocation || 'NOT_FOUND',
+      extractedUniversityName: extracted.extractedUniversityName || 'NOT_FOUND',
+      extractedProgramName: extracted.extractedProgramName || 'NOT_FOUND',
+      extractedCampusLocation: extracted.extractedCampusLocation || extracted.campusLocation || 'NOT_FOUND',
       remarks: extracted.remarks || 'Extracted via Gemini AI',
       multiplePrograms: extracted.multiplePrograms || [],
       multipleCampuses: extracted.multipleCampuses || [],
@@ -349,10 +394,21 @@ async function extractWithOpenAI(htmlContent, programName, universityName, url, 
 {
   "admissionDeadline": "YYYY-MM-DD or NOT_FOUND",
   "casDeadline": "YYYY-MM-DD or NOT_FOUND",
+  "i20Deadline": "YYYY-MM-DD or NOT_FOUND",
   "intakesAvailable": "e.g., September 2024, Fall 2024, January 2025 or NOT_FOUND",
   "intakeStatus": "open/closed/waitlist/NOT_FOUND",
+  "campusLocation": "campus name or location or NOT_FOUND",
+  "extractedUniversityName": "university name as it appears on the page or NOT_FOUND",
+  "extractedProgramName": "program name as it appears on the page or NOT_FOUND",
+  "extractedCampusLocation": "campus location as it appears on the page or NOT_FOUND",
   "remarks": "any important notes or NOT_FOUND"
 }
+
+IMPORTANT CONTEXT:
+- Focus ONLY on information for INTERNATIONAL STUDENTS FROM INDIA
+- Look for location dropdowns, country selectors, or sections mentioning "India", "international students", "overseas students", "international applicants"
+- If the page has location/country dropdowns, prioritize information shown when "India" is selected
+- Extract deadlines and requirements specifically for international students requiring visas
 
 University: ${universityName || 'Unknown'}
 Program: ${programName || 'Unknown'}
@@ -367,15 +423,26 @@ Rules:
 3. If information not found, use "NOT_FOUND"
 4. Extract campus location from page (look for "campus", "location", address, city names)
 5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by"
-7. Check intake status: "open", "closed", "waitlist", or "NOT_FOUND"
-8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs)
-9. Look for I-20 deadlines specifically (USA programs)
-10. Check tabs, dropdowns, and hidden content for information
+6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
+7. INTAKE STATUS LOGIC (CRITICAL):
+   - If there is a future deadline date (deadline is in the future), the intake is likely "open"
+   - If text says "closed", "not accepting", "full", "no longer accepting", use "closed"
+   - If text says "waitlist", "waiting list", use "waitlist"
+   - If text says "early applications encouraged", "apply early", "accepting applications", use "open"
+   - If there's a deadline date but no explicit "closed" message, assume "open" (deadlines indicate open applications)
+   - Only use "closed" if explicitly stated or if deadline has passed
+8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs) - for international students
+9. Look for I-20 deadlines specifically (USA programs) - for international students
+10. Check tabs, dropdowns, location selectors, and hidden content for information
 11. Parse dates in various formats and convert to YYYY-MM-DD
 12. Extract multiple intakes if available (comma-separated)
 13. If page has multiple programs or campuses, populate multiplePrograms or multipleCampuses arrays
-14. Be thorough - check all sections of the page`;
+14. Be thorough - check all sections of the page, especially those mentioning "international", "India", "overseas", "visa"
+15. Prioritize information from sections specifically about international students or country-specific requirements
+16. Extract university name, program name, and campus location as they appear on the page (from headings, titles, breadcrumbs, or prominent text)
+17. For extractedUniversityName: Look for the university name in page title, headings (h1, h2), or prominent text
+18. For extractedProgramName: Look for the program/course name in page title, headings, or course name sections
+19. For extractedCampusLocation: Look for campus, location, or city information, especially for international students`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -433,13 +500,43 @@ Rules:
 
     const extracted = JSON.parse(jsonMatch[0]);
     
+    // Post-process: If there's a future deadline and status is unclear, set to "open"
+    let intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check if any deadline is in the future
+    const deadlines = [
+      extracted.admissionDeadline,
+      extracted.casDeadline,
+      extracted.i20Deadline
+    ].filter(d => d && d !== 'NOT_FOUND');
+    
+    for (const deadline of deadlines) {
+      try {
+        const deadlineDate = new Date(deadline);
+        if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
+          // Future deadline found - if status is NOT_FOUND or unclear, set to "open"
+          if (intakeStatus === 'NOT_FOUND' || intakeStatus === '') {
+            intakeStatus = 'open';
+          }
+          break;
+        }
+      } catch (e) {
+        // Invalid date format, skip
+      }
+    }
+    
     return {
       admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
       casDeadline: extracted.casDeadline || 'NOT_FOUND',
       i20Deadline: extracted.i20Deadline || 'NOT_FOUND',
       intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
-      intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
+      intakeStatus: intakeStatus,
       campusLocation: extracted.campusLocation || 'NOT_FOUND',
+      extractedUniversityName: extracted.extractedUniversityName || 'NOT_FOUND',
+      extractedProgramName: extracted.extractedProgramName || 'NOT_FOUND',
+      extractedCampusLocation: extracted.extractedCampusLocation || extracted.campusLocation || 'NOT_FOUND',
       remarks: extracted.remarks || 'Extracted via OpenAI',
       multiplePrograms: extracted.multiplePrograms || [],
       multipleCampuses: extracted.multipleCampuses || [],

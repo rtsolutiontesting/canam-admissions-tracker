@@ -2109,6 +2109,35 @@ Rules:
                         // Extract data from URL - REAL FETCHING
                         const url = program.admissionsPageUrl || program.url;
                         
+                        // Extract names from URL and compare with provided names
+                        let extractedNames = { extractedUniversityName: '', extractedProgramName: '', extractedCampusLocation: '' };
+                        if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
+                            extractedNames = extractNamesFromUrl(url);
+                            
+                            // Compare provided names with extracted names
+                            const providedUniName = program.universityName || program.university || '';
+                            const providedProgName = program.programName || program.program || '';
+                            const providedCampusName = program.location || program.campusLocation || '';
+                            
+                            // Check for mismatches
+                            const uniMatch = compareNames(providedUniName, extractedNames.extractedUniversityName);
+                            const progMatch = compareNames(providedProgName, extractedNames.extractedProgramName);
+                            const campusMatch = compareNames(providedCampusName, extractedNames.extractedCampusLocation);
+                            
+                            // Add appended columns if there's a mismatch
+                            if (!uniMatch && extractedNames.extractedUniversityName) {
+                                program.appendedUniName = extractedNames.extractedUniversityName;
+                            }
+                            if (!progMatch && extractedNames.extractedProgramName) {
+                                program.appendedProgramName = extractedNames.extractedProgramName;
+                            }
+                            if (!campusMatch && extractedNames.extractedCampusLocation) {
+                                program.appendedCampusName = extractedNames.extractedCampusLocation;
+                            }
+                            
+                            // Also extract from HTML content later (more accurate)
+                        }
+                        
                         // Track URL scanned
                         if (url && url !== 'N/A' && url !== 'NOT_FOUND' && url.startsWith('http')) {
                             syncStats.urlsScanned++;
@@ -2226,6 +2255,7 @@ Rules:
                                             program.location = extracted.campusLocation || program.location || 'NOT_FOUND';
                                             program.errorMessage = extracted.errorMessage || '';
                                             program.checkedDate = new Date().toISOString().split('T')[0];
+                                            program.syncDate = new Date().toISOString(); // Store sync date
                                             program.remarks = extracted.remarks || 'Extracted via backend API + AI';
                                             program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
                                             program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
@@ -2233,6 +2263,26 @@ Rules:
                                             program.changeType = 'NEW';
                                             program.isNewlyFetched = true;
                                             program.lastChecked = new Date().toISOString();
+                                            
+                                            // Update appended names from extracted data if available
+                                            const providedUniName = program.universityName || program.university || '';
+                                            const providedProgName = program.programName || program.program || '';
+                                            const providedCampus = program.location || program.campusLocation || '';
+                                            
+                                            // Use extracted names from API if available
+                                            const extractedUni = extracted.extractedUniversityName || '';
+                                            const extractedProg = extracted.extractedProgramName || '';
+                                            const extractedCampus = extracted.extractedCampusLocation || extracted.campusLocation || '';
+                                            
+                                            if (extractedUni && extractedUni !== 'NOT_FOUND' && !compareNames(providedUniName, extractedUni)) {
+                                                program.appendedUniName = extractedUni;
+                                            }
+                                            if (extractedProg && extractedProg !== 'NOT_FOUND' && !compareNames(providedProgName, extractedProg)) {
+                                                program.appendedProgramName = extractedProg;
+                                            }
+                                            if (extractedCampus && extractedCampus !== 'NOT_FOUND' && !compareNames(providedCampus, extractedCampus)) {
+                                                program.appendedCampusName = extractedCampus;
+                                            }
                                             
                                             // Add NLP preview
                                             addNLPPreview(
@@ -2379,6 +2429,19 @@ Rules:
                                 program.intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
                                 program.errorMessage = extracted.errorMessage || '';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
+                                program.syncDate = new Date().toISOString(); // Store sync date
+                                
+                                // Update appended names from extracted data if available
+                                const providedUniName = program.universityName || program.university || '';
+                                const providedProgName = program.programName || program.program || '';
+                                const providedCampus = program.location || program.campusLocation || '';
+                                
+                                // Use extracted names from API if available (for pattern matching, these may not be available)
+                                const extractedCampus = extracted.campusLocation || '';
+                                
+                                if (extractedCampus && extractedCampus !== 'NOT_FOUND' && !compareNames(providedCampus, extractedCampus)) {
+                                    program.appendedCampusName = extractedCampus;
+                                }
                                 program.remarks = extracted.remarks || 'Data extracted via pattern matching';
                                 
                                 // Keep old fields for compatibility
@@ -2537,6 +2600,15 @@ Rules:
                 addStreamLine('success', `✅ Sync Complete: ${successCount} successful, ${errorCount} errors`);
                 addStreamLine('info', 'Data updated in table. You can download CSV to see all changes.');
                 
+                // Enable CSV download button after successful sync
+                const downloadButton = document.querySelector('.download-button');
+                if (downloadButton) {
+                    downloadButton.disabled = false;
+                    downloadButton.style.opacity = '1';
+                    downloadButton.style.cursor = 'pointer';
+                    addStreamLine('success', '📥 CSV Download button is now enabled!');
+                }
+                
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
                 }, 3000);
@@ -2560,7 +2632,7 @@ Rules:
                     alert('No data available to export. Please run sync first.');
                     return;
                 }
-                const headers = ['Sr', 'universityName', 'Campus Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'i20Deadline_found', 'intakeStatus', 'errorMessage', 'checkedDate', 'remarks'];
+                const headers = ['Sr', 'universityName', 'Campus Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'i20Deadline_found', 'intakeStatus', 'appended uni name', 'appended program name', 'appended campus name', 'errorMessage', 'checkedDate', 'syncDate', 'remarks'];
                 const csvRows = [headers.join(',')];
                 dataToExport.forEach((item, index) => {
                     const row = [
@@ -2574,8 +2646,12 @@ Rules:
                         escapeCSV(item.casSubmissionDeadline_found || item.casDeadline || 'NOT_FOUND'),
                         escapeCSV(item.i20Deadline_found || item.i20Deadline || 'NOT_FOUND'),
                         escapeCSV(item.intakeStatus || 'NOT_FOUND'),
+                        escapeCSV(item.appendedUniName || ''),
+                        escapeCSV(item.appendedProgramName || ''),
+                        escapeCSV(item.appendedCampusName || ''),
                         escapeCSV(item.errorMessage || ''),
                         escapeCSV(item.checkedDate || new Date().toISOString().split('T')[0]),
+                        escapeCSV(item.syncDate || new Date().toISOString()),
                         escapeCSV(item.remarks || item.admissionAlerts || '')
                     ];
                     csvRows.push(row.join(','));
@@ -2614,13 +2690,116 @@ Rules:
             return stringValue;
         }
 
+        // Extract university name, program name, and campus location from URL
+        function extractNamesFromUrl(url) {
+            const result = {
+                extractedUniversityName: '',
+                extractedProgramName: '',
+                extractedCampusLocation: ''
+            };
+            
+            try {
+                if (!url || typeof url !== 'string') return result;
+                
+                const urlObj = new URL(url);
+                const hostname = urlObj.hostname.toLowerCase();
+                const pathname = urlObj.pathname.toLowerCase();
+                const searchParams = urlObj.searchParams;
+                
+                // Extract university name from hostname (e.g., birmingham.ac.uk -> University of Birmingham)
+                const domainParts = hostname.split('.');
+                if (domainParts.length >= 2) {
+                    const mainDomain = domainParts[0];
+                    // Convert domain to readable name (e.g., birmingham -> Birmingham)
+                    result.extractedUniversityName = mainDomain.charAt(0).toUpperCase() + mainDomain.slice(1);
+                    
+                    // Handle common patterns
+                    if (mainDomain.includes('university') || mainDomain.includes('uni')) {
+                        result.extractedUniversityName = mainDomain.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    }
+                }
+                
+                // Extract program name from pathname
+                // Common patterns: /study/.../program-name, /courses/.../program-name, /programs/.../program-name
+                const pathSegments = pathname.split('/').filter(seg => seg && seg.length > 2);
+                
+                // Look for program name in path (usually the last meaningful segment)
+                // Skip common words: study, courses, programs, postgraduate, undergraduate, subjects
+                const skipWords = ['study', 'courses', 'programs', 'postgraduate', 'undergraduate', 'subjects', 'course', 'program', 'page', 'index', 'home'];
+                
+                for (let i = pathSegments.length - 1; i >= 0; i--) {
+                    const segment = pathSegments[i];
+                    if (!skipWords.includes(segment) && segment.length > 3) {
+                        // Decode URL encoding and format
+                        const decoded = decodeURIComponent(segment.replace(/-/g, ' '));
+                        result.extractedProgramName = decoded.split(' ').map(word => 
+                            word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(' ');
+                        break;
+                    }
+                }
+                
+                // Extract campus location from query params or path
+                // Common params: location, campus, city
+                const locationParam = searchParams.get('location') || searchParams.get('campus') || searchParams.get('city');
+                if (locationParam) {
+                    result.extractedCampusLocation = locationParam.split(' ').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ');
+                }
+                
+                // Also check path for campus/location info
+                const locationInPath = pathname.match(/(?:campus|location|city)[\/\-]([^\/\?]+)/i);
+                if (locationInPath && locationInPath[1]) {
+                    result.extractedCampusLocation = decodeURIComponent(locationInPath[1]).replace(/-/g, ' ').split(' ').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ');
+                }
+                
+                // Try to extract from page title or meta tags if available (will be done in extraction)
+                
+            } catch (error) {
+                console.error('Error extracting names from URL:', error);
+            }
+            
+            return result;
+        }
+        
+        // Compare provided names with extracted names
+        function compareNames(provided, extracted) {
+            const normalize = (str) => {
+                if (!str) return '';
+                return str.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+            };
+            
+            const providedNorm = normalize(provided);
+            const extractedNorm = normalize(extracted);
+            
+            // Check if they're similar (allow for minor differences)
+            if (providedNorm === extractedNorm) return true;
+            
+            // Check if one contains the other
+            if (providedNorm.includes(extractedNorm) || extractedNorm.includes(providedNorm)) {
+                return true;
+            }
+            
+            // Check for common words match (at least 2 significant words match)
+            const providedWords = providedNorm.split(' ').filter(w => w.length > 3);
+            const extractedWords = extractedNorm.split(' ').filter(w => w.length > 3);
+            const commonWords = providedWords.filter(w => extractedWords.includes(w));
+            
+            return commonWords.length >= 2;
+        }
+
         // Extract data from HTML content using pattern matching
         function extractDataFromContent(htmlContent, programName, universityName, url) {
             const result = {
                 admissionDeadline: 'NOT_FOUND',
                 casDeadline: 'NOT_FOUND',
+                i20Deadline: 'NOT_FOUND',
                 intakesAvailable: 'NOT_FOUND',
                 intakeStatus: 'open',
+                campusLocation: 'NOT_FOUND',
                 remarks: '',
                 errorMessage: ''
             };
@@ -2673,6 +2852,16 @@ Rules:
                 }
                 
                 // Step 6: Extract from divs with course/program/details classes
+                // PRIORITIZE: Look for sections mentioning "India", "international", "overseas", "visa"
+                const internationalSections = htmlContent.match(/<div[^>]*(?:class|id)=["'][^"']*(?:india|international|overseas|visa|country|location)[^"']*["'][^>]*>([\s\S]{10,1000})<\/div>/gi);
+                if (internationalSections) {
+                    internationalSections.forEach(section => {
+                        const text = section.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                        if (text.length > 10) enhancedContent = ' INTERNATIONAL: ' + text + ' ' + enhancedContent; // Prioritize at the beginning
+                    });
+                }
+                
+                // Step 6b: Extract from divs with course/program/details classes
                 const detailDivs = htmlContent.match(/<div[^>]*(?:class|id)=["'][^"']*(?:course|program|detail|info|date|deadline|intake|start|duration|study|mode|location|campus)[^"']*["'][^>]*>([\s\S]{10,500})<\/div>/gi);
                 if (detailDivs) {
                     detailDivs.forEach(div => {
@@ -2809,17 +2998,40 @@ Rules:
                     /(?:deadline|due\s+date|application\s+closes)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
                 ];
                 
-                // Search for admission deadline
+                // Search for admission deadline - PRIORITIZE international student deadlines
+                // First, look for deadlines specifically for international students or India
                 let deadlineFound = false;
-                for (const pattern of datePatterns) {
+                const internationalDeadlinePatterns = [
+                    /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
+                ];
+                
+                for (const pattern of internationalDeadlinePatterns) {
                     const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        // Take the first match and clean it
-                        let deadline = matches[0].replace(/(?:deadline|closing|application|admission|due\s+date|closes)[\s:]*/gi, '').trim();
+                        let deadline = matches[0].replace(/(?:deadline|closing|application|admission|due\s+date|closes|for\s+international|for\s+india|requiring\s+a\s+visa)[\s:]*/gi, '').trim();
                         if (deadline) {
                             result.admissionDeadline = deadline;
                             deadlineFound = true;
                             break;
+                        }
+                    }
+                }
+                
+                // If no international-specific deadline found, use general patterns
+                if (!deadlineFound) {
+                    for (const pattern of datePatterns) {
+                        const matches = cleanContent.match(pattern);
+                        if (matches && matches.length > 0) {
+                            // Take the first match and clean it
+                            let deadline = matches[0].replace(/(?:deadline|closing|application|admission|due\s+date|closes)[\s:]*/gi, '').trim();
+                            if (deadline) {
+                                result.admissionDeadline = deadline;
+                                deadlineFound = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -2890,12 +3102,88 @@ Rules:
                     }
                 }
                 
-                // Check for status keywords (open/closed/waitlist)
-                if (/(?:closed|not\s+accepting|no\s+longer\s+accepting|applications\s+closed|full)/gi.test(cleanContent)) {
+                // INTAKE STATUS LOGIC - Focus on international students from India
+                // First, check for explicit status keywords
+                let statusDetermined = false;
+                
+                // Check for explicit "closed" indicators
+                if (/(?:closed|not\s+accepting|no\s+longer\s+accepting|applications\s+closed|full|programme\s+is\s+full)/gi.test(cleanContent)) {
                     result.intakeStatus = 'closed';
-                } else if (/(?:waitlist|waiting\s+list|wait\s+list)/gi.test(cleanContent)) {
+                    statusDetermined = true;
+                } 
+                // Check for waitlist
+                else if (/(?:waitlist|waiting\s+list|wait\s+list)/gi.test(cleanContent)) {
                     result.intakeStatus = 'waitlist';
-                } else if (/(?:open|accepting|now\s+accepting|currently\s+accepting)/gi.test(cleanContent)) {
+                    statusDetermined = true;
+                }
+                // Check for explicit "open" indicators
+                else if (/(?:open|accepting|now\s+accepting|currently\s+accepting|early\s+applications\s+encouraged|apply\s+early)/gi.test(cleanContent)) {
+                    result.intakeStatus = 'open';
+                    statusDetermined = true;
+                }
+                
+                // If status not explicitly determined, check for future deadlines
+                // A future deadline indicates the intake is likely open
+                if (!statusDetermined) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // Check admission deadline
+                    if (result.admissionDeadline && result.admissionDeadline !== 'NOT_FOUND') {
+                        try {
+                            // Try to parse the deadline date
+                            const deadlineStr = result.admissionDeadline;
+                            let deadlineDate = null;
+                            
+                            // Try different date formats
+                            if (deadlineStr.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/)) {
+                                // MM/DD/YYYY or DD/MM/YYYY
+                                const parts = deadlineStr.split(/[\/\-]/);
+                                if (parts[2].length === 2) parts[2] = '20' + parts[2];
+                                deadlineDate = new Date(parts[2], parts[0] - 1, parts[1]);
+                            } else if (deadlineStr.match(/^\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)[a-z]*\s+\d{2,4}$/i)) {
+                                deadlineDate = new Date(deadlineStr);
+                            }
+                            
+                            if (deadlineDate && !isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
+                                // Future deadline found - intake is open
+                                result.intakeStatus = 'open';
+                                statusDetermined = true;
+                            }
+                        } catch (e) {
+                            // Date parsing failed, continue
+                        }
+                    }
+                    
+                    // Check CAS deadline (UK programs)
+                    if (!statusDetermined && result.casDeadline && result.casDeadline !== 'NOT_FOUND') {
+                        try {
+                            const deadlineDate = new Date(result.casDeadline);
+                            if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
+                                result.intakeStatus = 'open';
+                                statusDetermined = true;
+                            }
+                        } catch (e) {
+                            // Date parsing failed, continue
+                        }
+                    }
+                    
+                    // Check I-20 deadline (USA programs)
+                    if (!statusDetermined && result.i20Deadline && result.i20Deadline !== 'NOT_FOUND') {
+                        try {
+                            const deadlineDate = new Date(result.i20Deadline);
+                            if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
+                                result.intakeStatus = 'open';
+                                statusDetermined = true;
+                            }
+                        } catch (e) {
+                            // Date parsing failed, continue
+                        }
+                    }
+                }
+                
+                // If still not determined, default to 'open' (optimistic approach)
+                if (!statusDetermined) {
                     result.intakeStatus = 'open';
                 }
                 
