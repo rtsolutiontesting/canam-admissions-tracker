@@ -2984,6 +2984,9 @@ Rules:
                     .replace(/\s+/g, ' ')
                     .toLowerCase();
                 
+                // Debug: Log a sample of the content to see what we're working with
+                console.log('[Extraction] Content sample (first 1000 chars):', cleanContent.substring(0, 1000));
+                
                 // Extract intakes available - HUMAN-LIKE: Look for "Next start date", "Future start date", "Start date", etc.
                 const intakePatterns = [
                     // "Next start date: Jan 2026" or "Future start date: Jan 2026"
@@ -3046,9 +3049,14 @@ Rules:
                 let deadlineFound = false;
                 const internationalDeadlinePatterns = [
                     // Priority 1: "3 July 2026 Application deadline for international students requiring a visa" (date BEFORE text)
+                    // More flexible: allow for variations in spacing and text
                     /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})\s+application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa/gi,
+                    // Also try without "a" before visa
+                    /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})\s+application\s+deadline\s+for\s+international\s+students\s+requiring\s+visa/gi,
                     // Priority 2: "Application deadline for international students requiring a visa: 3 July 2026" (date AFTER text)
                     /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    // Also try without "a" before visa
+                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+visa)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
                     // Priority 3: Other international student deadline patterns
                     /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
                     /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
@@ -3062,8 +3070,8 @@ Rules:
                         // Extract the date from the match
                         let deadline = '';
                         
-                        // For patterns with capturing groups (priority 1 and 2), use the captured group
-                        if (i === 0 || i === 1) {
+                        // For patterns with capturing groups (priority 1-4), use the captured group
+                        if (i <= 3) {
                             // These patterns have the date in a capturing group
                             const execResult = pattern.exec(cleanContent);
                             if (execResult && execResult[1]) {
@@ -3085,7 +3093,13 @@ Rules:
                         if (deadline && deadline.match(/\d/)) {
                             result.admissionDeadline = deadline;
                             deadlineFound = true;
+                            console.log(`[Pattern Match ${i}] ✅ SUCCESS - Found deadline: "${deadline}" from pattern ${i}`, { 
+                                match: matches[0].substring(0, 100),
+                                patternIndex: i 
+                            });
                             break;
+                        } else {
+                            console.log(`[Pattern Match ${i}] ⚠️ Pattern matched but couldn't extract date:`, matches[0].substring(0, 100));
                         }
                     }
                 }
