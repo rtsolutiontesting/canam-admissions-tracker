@@ -744,26 +744,39 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
       }
     }
     
-    // Final debug: If still not found, check what dates exist in the content
+    // Final debug: If still not found, try a simpler approach - find dates near deadline keywords
     if (!deadlineFound) {
-      console.log('[Server Pattern Match] ❌ No deadline found after all attempts');
+      console.log('[Server Pattern Match] ❌ No deadline found after all attempts, trying simple date+keyword approach');
       // Find any dates in the content
       const anyDatePattern = /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi;
       const allDates = cleanContent.match(anyDatePattern);
       if (allDates) {
         console.log('[Server Pattern Match] Found dates in content:', allDates.slice(0, 10));
-        // Check if any date is near "deadline" or "application"
-        allDates.forEach(date => {
-          const dateIndex = cleanContent.indexOf(date.toLowerCase());
+        // Check if any date is near "deadline" or "application" or "international" or "visa"
+        for (const date of allDates) {
+          const dateLower = date.toLowerCase();
+          const dateIndex = cleanContent.indexOf(dateLower);
           if (dateIndex >= 0) {
-            const contextStart = Math.max(0, dateIndex - 100);
-            const contextEnd = Math.min(cleanContent.length, dateIndex + date.length + 200);
+            // Check context around the date (500 chars before and after)
+            const contextStart = Math.max(0, dateIndex - 500);
+            const contextEnd = Math.min(cleanContent.length, dateIndex + date.length + 500);
             const context = cleanContent.substring(contextStart, contextEnd);
-            if (context.includes('deadline') || context.includes('application')) {
-              console.log('[Server Pattern Match] Date near deadline keyword:', date, 'Context:', context);
+            
+            // Check if context contains deadline-related keywords
+            const hasDeadline = context.includes('deadline') || context.includes('application');
+            const hasInternational = context.includes('international') || context.includes('visa') || context.includes('requiring');
+            
+            if (hasDeadline && hasInternational) {
+              console.log('[Server Pattern Match] ✅ Found date near deadline+international keywords:', date);
+              console.log('[Server Pattern Match] Context:', context.substring(0, 300));
+              result.admissionDeadline = date.trim();
+              deadlineFound = true;
+              break;
+            } else if (hasDeadline) {
+              console.log('[Server Pattern Match] Found date near deadline keyword (no international):', date, 'Context:', context.substring(0, 200));
             }
           }
-        });
+        }
       } else {
         console.log('[Server Pattern Match] No dates found in content at all!');
       }
