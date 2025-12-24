@@ -187,10 +187,11 @@ export async function onRequestPost(context) {
     try {
       if (aiProvider === 'pattern' || (!apiKey && !geminiApiKey)) {
         // Use pattern matching if explicitly requested or no AI keys available
+        // IMPORTANT: Pass RAW HTML to pattern matching, not cleaned text (it needs HTML tags for priority extraction)
         console.log('[API] Using pattern matching mode');
-        console.log('[API] HTML content length:', cleanHtml.length);
-        console.log('[API] HTML content sample (first 500 chars):', cleanHtml.substring(0, 500));
-        extractedData = extractWithPatternMatchingServer(cleanHtml, programName, universityName, url);
+        console.log('[API] Raw HTML content length:', htmlContent.length);
+        console.log('[API] Raw HTML content sample (first 500 chars):', htmlContent.substring(0, 500));
+        extractedData = extractWithPatternMatchingServer(htmlContent, programName, universityName, url);
         console.log('[API] Pattern matching result:', JSON.stringify(extractedData, null, 2));
       } else if (aiProvider === 'gemini') {
         extractedData = await extractWithGemini(cleanHtml, programName, universityName, url, apiKey);
@@ -638,6 +639,16 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
     // Combine: Priority content FIRST (so patterns match it first)
     const cleanContent = cleanPriority + ' ' + cleanRemaining;
     
+    // Debug: Log priority content to see if we're extracting the right sections
+    console.log('[Server Pattern] Priority content length:', cleanPriority.length);
+    if (cleanPriority.length > 0) {
+      console.log('[Server Pattern] Priority content sample:', cleanPriority.substring(0, 500));
+    } else {
+      console.log('[Server Pattern] WARNING: No priority content found!');
+    }
+    console.log('[Server Pattern] Full content length:', cleanContent.length);
+    console.log('[Server Pattern] Full content sample (first 1000 chars):', cleanContent.substring(0, 1000));
+    
     // Priority patterns for international student deadlines
     const internationalDeadlinePatterns = [
       // Priority 1: "3 July 2026 Application deadline for international students requiring a visa" (date BEFORE text)
@@ -672,8 +683,24 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
         if (deadline && deadline.match(/\d/)) {
           result.admissionDeadline = deadline;
           deadlineFound = true;
-          console.log(`[Server Pattern Match ${i}] ✅ Found deadline: "${deadline}"`);
+          console.log(`[Server Pattern Match ${i}] ✅ Found deadline: "${deadline}" from pattern ${i}`);
+          console.log(`[Server Pattern Match ${i}] Match context:`, matches[0].substring(0, 200));
           break;
+        } else {
+          console.log(`[Server Pattern Match ${i}] Pattern matched but couldn't extract date. Match:`, matches[0].substring(0, 150));
+        }
+      } else {
+        // Debug: Check if pattern should have matched for Birmingham case
+        if (i === 0) {
+          // Check for the specific Birmingham pattern: "3 july 2026 application deadline for international students requiring a visa"
+          const testPattern = /3\s+july\s+2026.*application\s+deadline.*international.*students.*requiring.*visa/i;
+          if (testPattern.test(cleanContent)) {
+            console.log(`[Server Pattern Match ${i}] ⚠️ Birmingham pattern exists in content but regex didn't match!`);
+            const contextMatch = cleanContent.match(/3\s+july\s+2026[\s\S]{0,200}/i);
+            if (contextMatch) {
+              console.log(`[Server Pattern Match ${i}] Content around pattern:`, contextMatch[0]);
+            }
+          }
         }
       }
     }
@@ -681,6 +708,7 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
     // If still not found, try searching in priority sections only (more focused)
     if (!deadlineFound && cleanPriority) {
       console.log('[Server Pattern Match] Trying priority sections only...');
+      console.log('[Server Pattern Match] Priority content:', cleanPriority.substring(0, 1000));
       for (let i = 0; i < internationalDeadlinePatterns.length; i++) {
         const pattern = internationalDeadlinePatterns[i];
         const matches = cleanPriority.match(pattern);
@@ -706,6 +734,31 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
             break;
           }
         }
+      }
+    }
+    
+    // Final debug: If still not found, check what dates exist in the content
+    if (!deadlineFound) {
+      console.log('[Server Pattern Match] ❌ No deadline found after all attempts');
+      // Find any dates in the content
+      const anyDatePattern = /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi;
+      const allDates = cleanContent.match(anyDatePattern);
+      if (allDates) {
+        console.log('[Server Pattern Match] Found dates in content:', allDates.slice(0, 10));
+        // Check if any date is near "deadline" or "application"
+        allDates.forEach(date => {
+          const dateIndex = cleanContent.indexOf(date.toLowerCase());
+          if (dateIndex >= 0) {
+            const contextStart = Math.max(0, dateIndex - 100);
+            const contextEnd = Math.min(cleanContent.length, dateIndex + date.length + 200);
+            const context = cleanContent.substring(contextStart, contextEnd);
+            if (context.includes('deadline') || context.includes('application')) {
+              console.log('[Server Pattern Match] Date near deadline keyword:', date, 'Context:', context);
+            }
+          }
+        });
+      } else {
+        console.log('[Server Pattern Match] No dates found in content at all!');
       }
     }
     
