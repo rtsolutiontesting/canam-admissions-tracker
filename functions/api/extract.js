@@ -9,8 +9,6 @@
  * Body: { url, programName, universityName, aiProvider, apiKey }
  */
 
-import { extractWithPatternMatching } from './pattern-matching.js';
-
 export async function onRequestPost(context) {
   const { request } = context;
   
