@@ -178,8 +178,8 @@ export async function onRequestPost(context) {
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Limit to 80KB for AI (increased from 50KB to capture more content)
-    const cleanHtml = visibleText.substring(0, 80000);
+    // Limit to 100KB for AI (increased to capture maximum content for comprehensive extraction)
+    const cleanHtml = visibleText.substring(0, 100000);
 
     // Step 3: Extract data using AI with automatic fallback
     let extractedData;

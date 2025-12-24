@@ -2165,10 +2165,11 @@ Rules:
                             try {
                                 addStreamLine('info', `[${processedCount}] Processing: ${url.substring(0, 60)}...`);
                                 
-                                // Human-like delay: 10 seconds per page as requested (like a human reading)
+                                // Human-like delay: 15-20 seconds per page for thorough extraction (like a human reading carefully)
                                 if (processedCount > 1) {
-                                    addStreamLine('info', `[${processedCount}] ⏳ Waiting 10 seconds (human-like reading time)...`);
-                                    await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
+                                    const readTime = 15000 + Math.random() * 5000; // 15-20 seconds random
+                                    addStreamLine('info', `[${processedCount}] ⏳ Waiting ${Math.round(readTime/1000)} seconds (thorough human-like reading time for best data extraction)...`);
+                                    await new Promise(resolve => setTimeout(resolve, readTime));
                                 }
                                 
                                 // USE PROPER BACKEND API - Server-side fetching + AI extraction
@@ -3112,35 +3113,85 @@ Rules:
                     }
                 }
                 
-                // Search for CAS deadline (UK specific)
+                // COMPREHENSIVE CAS deadline extraction (UK specific) - ALL possible formats
                 const casPatterns = [
-                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline|confirmation\s+of\s+acceptance)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
-                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas\s+deadline|confirmation\s+of\s+acceptance)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
+                    // Priority 1: Date BEFORE text: "3 July 2026 CAS deadline"
+                    /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})\s+(?:cas\s+deadline|cas\s+submission\s+deadline|confirmation\s+of\s+acceptance\s+for\s+studies)/gi,
+                    // Priority 2: Date AFTER text: "CAS deadline: 3 July 2026"
+                    /(?:cas\s+deadline|cas\s+submission\s+deadline|confirmation\s+of\s+acceptance\s+for\s+studies|cas)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    // Priority 3: Numeric formats
+                    /(?:cas\s+deadline|cas\s+submission\s+deadline|cas)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    // Priority 4: Short form "CAS: 3 July 2026"
+                    /cas[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
                 ];
                 
-                for (const pattern of casPatterns) {
+                let casFound = false;
+                for (let i = 0; i < casPatterns.length; i++) {
+                    const pattern = casPatterns[i];
                     const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        let casDeadline = matches[0].replace(/(?:cas|confirmation\s+of\s+acceptance|deadline|submission)[\s:]*/gi, '').trim();
-                        if (casDeadline) {
+                        // Extract date from match
+                        let casDeadline = '';
+                        if (i === 0) {
+                            // Date comes first - extract it directly
+                            const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
+                            if (dateMatch && dateMatch[1]) {
+                                casDeadline = dateMatch[1].trim();
+                            }
+                        } else {
+                            // Date comes after text - extract from match
+                            const execResult = pattern.exec(cleanContent);
+                            if (execResult && execResult[1]) {
+                                casDeadline = execResult[1].trim();
+                            }
+                            pattern.lastIndex = 0; // Reset regex
+                        }
+                        
+                        if (casDeadline && casDeadline.match(/\d/)) {
                             result.casDeadline = casDeadline;
+                            casFound = true;
                             break;
                         }
                     }
                 }
                 
-                // Search for I-20 deadline (USA specific)
+                // COMPREHENSIVE I-20 deadline extraction (USA specific) - ALL possible formats
                 const i20Patterns = [
-                    /(?:i-20|i20|form\s+i-20|i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
-                    /(?:i-20|i20|form\s+i-20|i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
+                    // Priority 1: Date BEFORE text: "3 July 2026 I-20 deadline"
+                    /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})\s+(?:i-20\s+deadline|i20\s+deadline|form\s+i-20\s+deadline)/gi,
+                    // Priority 2: Date AFTER text: "I-20 deadline: 3 July 2026"
+                    /(?:i-20\s+deadline|i20\s+deadline|form\s+i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    // Priority 3: Numeric formats
+                    /(?:i-20|i20|form\s+i-20)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    // Priority 4: Short form "I-20: 3 July 2026"
+                    /(?:i-20|i20)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
                 ];
                 
-                for (const pattern of i20Patterns) {
+                let i20Found = false;
+                for (let i = 0; i < i20Patterns.length; i++) {
+                    const pattern = i20Patterns[i];
                     const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        let i20Deadline = matches[0].replace(/(?:i-20|i20|form\s+i-20|i-20\s+deadline|i-20\s+form|i-20\s+document)[\s:]*/gi, '').trim();
-                        if (i20Deadline) {
+                        // Extract date from match
+                        let i20Deadline = '';
+                        if (i === 0) {
+                            // Date comes first - extract it directly
+                            const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
+                            if (dateMatch && dateMatch[1]) {
+                                i20Deadline = dateMatch[1].trim();
+                            }
+                        } else {
+                            // Date comes after text - extract from match
+                            const execResult = pattern.exec(cleanContent);
+                            if (execResult && execResult[1]) {
+                                i20Deadline = execResult[1].trim();
+                            }
+                            pattern.lastIndex = 0; // Reset regex
+                        }
+                        
+                        if (i20Deadline && i20Deadline.match(/\d/)) {
                             result.i20Deadline = i20Deadline;
+                            i20Found = true;
                             break;
                         }
                     }
