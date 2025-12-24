@@ -2652,7 +2652,7 @@ Rules:
                     alert('No data available to export. Please run sync first.');
                     return;
                 }
-                const headers = ['Sr', 'universityName', 'Campus Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'i20Deadline_found', 'intakeStatus', 'appended uni name', 'appended program name', 'appended campus name', 'errorMessage', 'checkedDate', 'syncDate', 'remarks'];
+                const headers = ['Sr', 'universityName', 'Campus Location', 'programName', 'admissionsPageUrl', 'intakesAvailable', 'Application Deadline', 'admissionDeadline_found', 'casSubmissionDeadline_found', 'i20Deadline_found', 'intakeStatus', 'appended uni name', 'appended program name', 'appended campus name', 'errorMessage', 'checkedDate', 'syncDate', 'remarks'];
                 const csvRows = [headers.join(',')];
                 dataToExport.forEach((item, index) => {
                     const row = [
