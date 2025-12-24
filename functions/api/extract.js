@@ -189,10 +189,16 @@ export async function onRequestPost(context) {
         // Use pattern matching if explicitly requested or no AI keys available
         // IMPORTANT: Pass RAW HTML to pattern matching, not cleaned text (it needs HTML tags for priority extraction)
         console.log('[API] Using pattern matching mode');
-        console.log('[API] Raw HTML content length:', htmlContent.length);
-        console.log('[API] Raw HTML content sample (first 500 chars):', htmlContent.substring(0, 500));
-        extractedData = extractWithPatternMatchingServer(htmlContent, programName, universityName, url);
-        console.log('[API] Pattern matching result:', JSON.stringify(extractedData, null, 2));
+        console.log('[API] Raw HTML content length:', htmlContent ? htmlContent.length : 0);
+        console.log('[API] Raw HTML content sample (first 500 chars):', htmlContent ? htmlContent.substring(0, 500) : 'NO CONTENT');
+        try {
+          extractedData = extractWithPatternMatchingServer(htmlContent, programName, universityName, url);
+          console.log('[API] Pattern matching result:', JSON.stringify(extractedData, null, 2));
+        } catch (patternError) {
+          console.error('[API] Pattern matching error:', patternError);
+          console.error('[API] Pattern matching error stack:', patternError.stack);
+          throw patternError;
+        }
       } else if (aiProvider === 'gemini') {
         extractedData = await extractWithGemini(cleanHtml, programName, universityName, url, apiKey);
       } else if (aiProvider === 'openai') {
@@ -662,23 +668,24 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
     let deadlineFound = false;
     for (let i = 0; i < internationalDeadlinePatterns.length; i++) {
       const pattern = internationalDeadlinePatterns[i];
-      const matches = cleanContent.match(pattern);
-      if (matches && matches.length > 0) {
-        let deadline = '';
-        // Patterns 0-3 have capturing groups
-        if (i <= 3) {
+      try {
+        const matches = cleanContent.match(pattern);
+        if (matches && matches.length > 0) {
+          let deadline = '';
+          // All patterns have capturing groups for the date
           const execResult = pattern.exec(cleanContent);
           if (execResult && execResult[1]) {
             deadline = execResult[1].trim();
           }
           pattern.lastIndex = 0; // Reset regex
-        } else {
-          // For other patterns, extract date from match
-          const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
-          if (dateMatch && dateMatch[1]) {
-            deadline = dateMatch[1].trim();
+          
+          // If no capturing group match, try extracting date from the full match
+          if (!deadline) {
+            const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
+            if (dateMatch && dateMatch[1]) {
+              deadline = dateMatch[1].trim();
+            }
           }
-        }
         
         if (deadline && deadline.match(/\d/)) {
           result.admissionDeadline = deadline;
