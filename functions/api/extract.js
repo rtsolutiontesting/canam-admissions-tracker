@@ -274,17 +274,21 @@ URL: ${url}
 HTML Content (comprehensive extraction - check ALL sections):
 ${htmlContent.substring(0, 50000)}
 
-EXTRACTION STRATEGY (MANDATORY - Read like a human):
-1. Read the ENTIRE content systematically - check headings, paragraphs, lists, tables, divs, spans, labels, data attributes
-2. Check ALL date formats: "3 July 2026", "July 3, 2026", "03/07/2026", "2026-07-03", "3rd July 2026", "July 3rd, 2026"
-3. Look in ALL locations: visible text, hidden tabs, dropdowns, accordions, collapsed sections, data attributes
-4. For deadlines: Check if date appears BEFORE or AFTER the deadline text (both formats exist)
-5. For intakes: Look for "September 2024", "Fall 2024", "2024/25", "Jan 2025", "2024-09", etc.
-6. For campus: Check addresses, location mentions, "at [location]", "in [city]", campus names
-7. For status: ONLY use if EXPLICITLY stated - do NOT assume based on dates or other info
-8. Extract from highlighted/bolded text (often contains important deadlines/info)
-9. Check multiple passes - if first pattern doesn't match, try alternative patterns
-10. NO ASSUMPTIONS - if not found after thorough search, return NOT_FOUND
+EXTRACTION STRATEGY (MANDATORY - PRIORITIZE DEADLINE SECTIONS):
+1. PRIORITY READING: Focus on sections containing "deadline", "application", "international", "visa", "requiring", "students", "India" FIRST
+2. Check PRIORITY sections before reading the entire page - these are most likely to contain deadlines
+3. Look for highlighted/bolded text FIRST (often contains important deadlines)
+4. Check ALL date formats: "3 July 2026", "July 3, 2026", "03/07/2026", "2026-07-03", "3rd July 2026", "July 3rd, 2026"
+5. For deadlines: Check if date appears BEFORE or AFTER the deadline text (both formats exist)
+   - "3 July 2026 Application deadline for international students requiring a visa" (date FIRST - HIGHEST PRIORITY)
+   - "Application deadline for international students requiring a visa: 3 July 2026" (date after)
+6. Look in priority locations FIRST: sections with deadline keywords, highlighted text, paragraphs with "international students"
+7. Then check other locations: visible text, hidden tabs, dropdowns, accordions, collapsed sections
+8. For intakes: Look for "September 2024", "Fall 2024", "2024/25", "Jan 2025", "2024-09", etc.
+9. For campus: Check addresses, location mentions, "at [location]", "in [city]", campus names
+10. For status: ONLY use if EXPLICITLY stated - do NOT assume based on dates or other info
+11. Check multiple passes - if first pattern doesn't match, try alternative patterns
+12. NO ASSUMPTIONS - if not found after thorough search, return NOT_FOUND
 
 Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
@@ -419,17 +423,21 @@ URL: ${url}
 HTML Content (comprehensive extraction - check ALL sections):
 ${htmlContent.substring(0, 50000)}
 
-EXTRACTION STRATEGY (MANDATORY - Read like a human):
-1. Read the ENTIRE content systematically - check headings, paragraphs, lists, tables, divs, spans, labels, data attributes
-2. Check ALL date formats: "3 July 2026", "July 3, 2026", "03/07/2026", "2026-07-03", "3rd July 2026", "July 3rd, 2026"
-3. Look in ALL locations: visible text, hidden tabs, dropdowns, accordions, collapsed sections, data attributes
-4. For deadlines: Check if date appears BEFORE or AFTER the deadline text (both formats exist)
-5. For intakes: Look for "September 2024", "Fall 2024", "2024/25", "Jan 2025", "2024-09", etc.
-6. For campus: Check addresses, location mentions, "at [location]", "in [city]", campus names
-7. For status: ONLY use if EXPLICITLY stated - do NOT assume based on dates or other info
-8. Extract from highlighted/bolded text (often contains important deadlines/info)
-9. Check multiple passes - if first pattern doesn't match, try alternative patterns
-10. NO ASSUMPTIONS - if not found after thorough search, return NOT_FOUND
+EXTRACTION STRATEGY (MANDATORY - PRIORITIZE DEADLINE SECTIONS):
+1. PRIORITY READING: Focus on sections containing "deadline", "application", "international", "visa", "requiring", "students", "India" FIRST
+2. Check PRIORITY sections before reading the entire page - these are most likely to contain deadlines
+3. Look for highlighted/bolded text FIRST (often contains important deadlines)
+4. Check ALL date formats: "3 July 2026", "July 3, 2026", "03/07/2026", "2026-07-03", "3rd July 2026", "July 3rd, 2026"
+5. For deadlines: Check if date appears BEFORE or AFTER the deadline text (both formats exist)
+   - "3 July 2026 Application deadline for international students requiring a visa" (date FIRST - HIGHEST PRIORITY)
+   - "Application deadline for international students requiring a visa: 3 July 2026" (date after)
+6. Look in priority locations FIRST: sections with deadline keywords, highlighted text, paragraphs with "international students"
+7. Then check other locations: visible text, hidden tabs, dropdowns, accordions, collapsed sections
+8. For intakes: Look for "September 2024", "Fall 2024", "2024/25", "Jan 2025", "2024-09", etc.
+9. For campus: Check addresses, location mentions, "at [location]", "in [city]", campus names
+10. For status: ONLY use if EXPLICITLY stated - do NOT assume based on dates or other info
+11. Check multiple passes - if first pattern doesn't match, try alternative patterns
+12. NO ASSUMPTIONS - if not found after thorough search, return NOT_FOUND
 
 Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
