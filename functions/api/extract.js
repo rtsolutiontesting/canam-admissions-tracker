@@ -41,18 +41,10 @@ export async function onRequestPost(context) {
     }
 
     // Allow pattern matching mode if no AI key provided
-    if (!apiKey && aiProvider !== 'pattern') {
-      // If no AI key and not explicitly requesting pattern matching, return error
-      // But allow pattern matching mode
-      if (aiProvider !== 'pattern') {
-        return new Response(JSON.stringify({ error: 'AI API key is required (or use aiProvider: "pattern" for pattern matching only)' }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
-      }
+    // Don't require API key if using pattern matching
+    if (!apiKey && aiProvider !== 'pattern' && !geminiApiKey) {
+      // If no AI key and not explicitly requesting pattern matching, use pattern matching as fallback
+      aiProvider = 'pattern';
     }
 
     // Step 1: Fetch HTML server-side (NO CORS issues!)
