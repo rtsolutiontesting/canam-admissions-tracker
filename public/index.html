@@ -2389,11 +2389,19 @@ Rules:
                                 program.isNewlyFetched = true; // Flag for highlighting
                                 program.lastChecked = new Date().toISOString();
                                 
-                                // Add NLP preview
+                                // Add NLP preview with all extracted fields
                                 addNLPPreview(
                                     program.programName || program.program,
                                     program.universityName || program.university,
-                                    extracted,
+                                    {
+                                        campusLocation: program.location || extracted.campusLocation || 'NOT_FOUND',
+                                        admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
+                                        casDeadline: extracted.casDeadline || 'NOT_FOUND',
+                                        i20Deadline: extracted.i20Deadline || 'NOT_FOUND',
+                                        intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
+                                        intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
+                                        remarks: extracted.remarks || 'Data extracted via pattern matching'
+                                    },
                                     true // isNew
                                 );
                                 
