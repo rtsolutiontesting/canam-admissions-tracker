@@ -2374,13 +2374,14 @@ Rules:
                                 // Update program with extracted data
                                 program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
+                                program.i20Deadline_found = extracted.i20Deadline || 'NOT_FOUND';
                                 program.intakesAvailable = extracted.intakesAvailable || 'NOT_FOUND';
+                                program.intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
                                 program.errorMessage = extracted.errorMessage || '';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
                                 program.remarks = extracted.remarks || 'Data extracted via pattern matching';
                                 
                                 // Keep old fields for compatibility
-                                program.intakeStatus = extracted.intakeStatus || 'open';
                                 program.intakeOffered = extracted.intakesAvailable || 'NOT_FOUND';
                                 program.applicationDeadline = extracted.admissionDeadline || 'NOT_FOUND';
                                 program.casDeadline = extracted.casDeadline || 'NOT_FOUND';
