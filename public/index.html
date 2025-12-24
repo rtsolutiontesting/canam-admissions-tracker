@@ -2532,6 +2532,7 @@ Rules:
                         
                         program.intakeStatus = 'pending';
                         program.admissionDeadline = 'ERROR';
+                        program.admissionDeadline_found = 'ERROR';
                         program.applicationDeadline = 'ERROR';
                         program.changeType = 'NEW';
                         addStreamLine('error', `❌ [${processedCount}] Failed: ${program.university} - ${error.message}`);
