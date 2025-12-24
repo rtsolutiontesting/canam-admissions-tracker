@@ -2665,6 +2665,7 @@ Rules:
                         escapeCSV(item.programName || item.program || ''),
                         escapeCSV(item.admissionsPageUrl || item.url || ''),
                         escapeCSV(item.intakesAvailable || item.intakeOffered || 'NOT_FOUND'),
+                        escapeCSV(item.admissionDeadline || item.admissionDeadline_found || item.applicationDeadline || item.deadline || 'NOT_FOUND'),
                         escapeCSV(item.admissionDeadline_found || item.applicationDeadline || item.deadline || 'NOT_FOUND'),
                         escapeCSV(item.casSubmissionDeadline_found || item.casDeadline || 'NOT_FOUND'),
                         escapeCSV(item.i20Deadline_found || item.i20Deadline || 'NOT_FOUND'),
