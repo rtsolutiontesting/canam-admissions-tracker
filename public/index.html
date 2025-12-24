@@ -2314,7 +2314,13 @@ Rules:
                                             );
                                             
                                             successCount++;
-                                            addStreamLine('success', `✅ [${processedCount}] Backend API extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}, Intakes: ${program.intakesAvailable}`);
+                                            console.log(`[${processedCount}] Extracted data:`, {
+                                                admissionDeadline: program.admissionDeadline,
+                                                admissionDeadline_found: program.admissionDeadline_found,
+                                                applicationDeadline: program.applicationDeadline,
+                                                extracted: extracted.admissionDeadline
+                                            });
+                                            addStreamLine('success', `✅ [${processedCount}] Backend API extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline || program.admissionDeadline_found || 'NOT_FOUND'}, Intakes: ${program.intakesAvailable}`);
                                         }
                                         
                                         // Add multiple programs/campuses to data store
@@ -2493,7 +2499,12 @@ Rules:
                                 );
                                 
                                 successCount++;
-                                addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline_found}`);
+                                console.log(`[${processedCount}] Pattern matching extracted:`, {
+                                    admissionDeadline: program.admissionDeadline,
+                                    admissionDeadline_found: program.admissionDeadline_found,
+                                    extracted: extracted.admissionDeadline
+                                });
+                                addStreamLine('success', `✅ [${processedCount}] Extracted: ${program.universityName || program.university} - Deadline: ${program.admissionDeadline || program.admissionDeadline_found || 'NOT_FOUND'}`);
                                 
                             } catch (error) {
                                 program.errorMessage = `Failed to extract: ${error.message}`;
