@@ -2850,10 +2850,38 @@ Rules:
             };
             
             try {
-                // HUMAN-LIKE READING: Extract ALL visible text like a human would scan the page
+                // PRIORITY READING: Extract deadline-related sections FIRST (like a human would focus on important info)
+                let priorityContent = '';
                 let enhancedContent = htmlContent;
                 
-                // Step 1: Extract text from headings (humans read these first)
+                // STEP 1: PRIORITIZE - Extract sections with deadline keywords FIRST
+                // These sections are most likely to contain the deadline information
+                const deadlineSectionPatterns = [
+                    // Sections with class/id containing deadline keywords
+                    /<div[^>]*(?:class|id)=["'][^"']*(?:deadline|application|international|visa|admission|apply|closing|india)[^"']*["'][^>]*>([\s\S]{50,2000})<\/div>/gi,
+                    // Paragraphs with deadline keywords
+                    /<p[^>]*>([^<]{0,800}(?:deadline|application\s+deadline|international\s+students|requiring\s+visa|india)[^<]{0,800})<\/p>/gi,
+                    // List items with deadline keywords
+                    /<li[^>]*>([^<]{0,500}(?:deadline|application\s+deadline|international\s+students|requiring\s+visa)[^<]{0,500})<\/li>/gi,
+                    // Strong/bold text (often highlights important deadlines)
+                    /<(?:strong|b|em|mark|highlight)[^>]*>([^<]{0,500}(?:deadline|application|july|june|august|september|2026|2025)[^<]{0,500})<\/(?:strong|b|em|mark|highlight)>/gi,
+                    // Sections mentioning "India" or "international"
+                    /<div[^>]*(?:class|id)=["'][^"']*(?:india|international|overseas|country)[^"']*["'][^>]*>([\s\S]{50,2000})<\/div>/gi,
+                ];
+                
+                for (const pattern of deadlineSectionPatterns) {
+                    const matches = htmlContent.match(pattern);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const text = match.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                            if (text.length > 20) {
+                                priorityContent = ' PRIORITY_SECTION: ' + text + ' ' + priorityContent;
+                            }
+                        });
+                    }
+                }
+                
+                // Step 2: Extract text from headings (humans read these first)
                 const headings = htmlContent.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi);
                 if (headings) {
                     headings.forEach(h => {
