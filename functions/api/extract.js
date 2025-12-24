@@ -195,7 +195,8 @@ export async function onRequestPost(context) {
       }
     } catch (primaryError) {
       // If OpenAI hits rate limit (429) and Gemini key is available, automatically fallback
-      if (aiProvider === 'openai' && primaryError.message.includes('429') && geminiApiKey) {
+      const isRateLimit = primaryError.isRateLimit || primaryError.statusCode === 429 || primaryError.message.includes('429') || primaryError.message.includes('Rate limit');
+      if (aiProvider === 'openai' && isRateLimit && geminiApiKey) {
         try {
           return new Response(JSON.stringify({
             ...(await extractWithGemini(cleanHtml, programName, universityName, url, geminiApiKey)),
