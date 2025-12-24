@@ -2179,7 +2179,9 @@ Rules:
                                 const config = getAIConfig();
                                 const hasAIKey = (config.aiProvider === 'gemini' && config.geminiApiKey) || (config.aiProvider === 'openai' && config.openaiApiKey);
                                 
-                                if (hasAIKey) {
+                                // ALWAYS use backend API for server-side fetching (no CORS issues)
+                                // Backend can do pattern matching even without AI keys
+                                if (true) { // Always use backend API
                                     const agentName = config.aiProvider === 'gemini' ? 'Gemini 1.5 Flash' : 'OpenAI GPT-4';
                                     // Use backend API for proper extraction (server-side, no CORS)
                                     addStreamLine('info', `[${processedCount}] 🤖 Using backend API with AI extraction (${agentName})...`);

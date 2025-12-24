@@ -9,6 +9,8 @@
  * Body: { url, programName, universityName, aiProvider, apiKey }
  */
 
+import { extractWithPatternMatching } from './pattern-matching.js';
+
 export async function onRequestPost(context) {
   const { request } = context;
   
@@ -38,14 +40,19 @@ export async function onRequestPost(context) {
       });
     }
 
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'AI API key is required' }), {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+    // Allow pattern matching mode if no AI key provided
+    if (!apiKey && aiProvider !== 'pattern') {
+      // If no AI key and not explicitly requesting pattern matching, return error
+      // But allow pattern matching mode
+      if (aiProvider !== 'pattern') {
+        return new Response(JSON.stringify({ error: 'AI API key is required (or use aiProvider: "pattern" for pattern matching only)' }), {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
     }
 
     // Step 1: Fetch HTML server-side (NO CORS issues!)
