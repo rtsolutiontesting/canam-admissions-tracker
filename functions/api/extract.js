@@ -183,7 +183,7 @@ export async function onRequestPost(context) {
 
     // Step 3: Extract data using AI with automatic fallback
     let extractedData;
-    const { geminiApiKey } = body; // Get Gemini API key for fallback
+    // geminiApiKey is already extracted from body on line 29
     
     try {
       if (aiProvider === 'gemini') {
