@@ -2605,6 +2605,9 @@ Rules:
                     html += `<td>${escapeHtml(progName)}</td>`;
                     html += `<td><a href="${escapeHtml(admUrl)}" target="_blank" style="color: #2196f3; text-decoration: underline;">${escapeHtml(admUrl.length > 50 ? admUrl.substring(0, 50) + '...' : admUrl || 'N/A')}</a></td>`;
                     html += `<td>${escapeHtml(intakesAvail)}</td>`;
+                    // Application Deadline column - show the extracted deadline
+                    const applicationDeadline = program.admissionDeadline || program.admissionDeadline_found || program.applicationDeadline || 'NOT_FOUND';
+                    html += `<td style="font-weight: ${applicationDeadline !== 'NOT_FOUND' ? 'bold' : 'normal'}; color: ${applicationDeadline !== 'NOT_FOUND' ? '#2196f3' : '#999'};">${escapeHtml(applicationDeadline)}</td>`;
                     html += `<td>${escapeHtml(admDeadline)}</td>`;
                     html += `<td>${escapeHtml(casDeadline)}</td>`;
                     html += `<td>${escapeHtml(i20Deadline)}</td>`;
