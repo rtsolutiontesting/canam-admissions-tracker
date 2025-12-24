@@ -275,17 +275,19 @@ ${htmlContent.substring(0, 30000)}
 Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
 2. Dates must be in YYYY-MM-DD format
-3. If information not found, use "NOT_FOUND"
-4. Extract campus location from page (look for "campus", "location", address, city names)
-5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
-7. INTAKE STATUS LOGIC (CRITICAL):
-   - If there is a future deadline date (deadline is in the future), the intake is likely "open"
-   - If text says "closed", "not accepting", "full", "no longer accepting", use "closed"
-   - If text says "waitlist", "waiting list", use "waitlist"
-   - If text says "early applications encouraged", "apply early", "accepting applications", use "open"
-   - If there's a deadline date but no explicit "closed" message, assume "open" (deadlines indicate open applications)
-   - Only use "closed" if explicitly stated or if deadline has passed
+3. CRITICAL: If information is NOT explicitly found on the page, use "NOT_FOUND" - DO NOT assume, guess, or infer any values
+4. Extract campus location from page ONLY if explicitly mentioned (look for "campus", "location", address, city names)
+5. Extract intakes from text ONLY if explicitly stated (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
+6. Look for deadlines ONLY if explicitly mentioned near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
+7. INTAKE STATUS LOGIC (CRITICAL - DO NOT ASSUME):
+   - ONLY return "open", "closed", or "waitlist" if EXPLICITLY STATED on the page
+   - If text explicitly says "closed", "not accepting", "full", "no longer accepting", use "closed"
+   - If text explicitly says "waitlist", "waiting list", use "waitlist"
+   - If text explicitly says "open", "accepting applications", "now accepting", use "open"
+   - If intake status is NOT explicitly mentioned anywhere on the page, return "NOT_FOUND"
+   - DO NOT assume status based on deadline dates, future dates, or any other information
+   - DO NOT guess, infer, or make assumptions - only use what is clearly and explicitly stated
+   - If you are unsure, return "NOT_FOUND"
 8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs) - for international students
 9. Look for I-20 deadlines specifically (USA programs) - for international students
 10. Check tabs, dropdowns, location selectors, and hidden content for information
@@ -340,31 +342,13 @@ Rules:
 
     const extracted = JSON.parse(jsonMatch[0]);
     
-    // Post-process: If there's a future deadline and status is unclear, set to "open"
+    // DO NOT ASSUME - Only use what's explicitly found on the page
+    // If intake status is not found, return NOT_FOUND - do not assume "open"
     let intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
-    // Check if any deadline is in the future
-    const deadlines = [
-      extracted.admissionDeadline,
-      extracted.casDeadline,
-      extracted.i20Deadline
-    ].filter(d => d && d !== 'NOT_FOUND');
-    
-    for (const deadline of deadlines) {
-      try {
-        const deadlineDate = new Date(deadline);
-        if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
-          // Future deadline found - if status is NOT_FOUND or unclear, set to "open"
-          if (intakeStatus === 'NOT_FOUND' || intakeStatus === '') {
-            intakeStatus = 'open';
-          }
-          break;
-        }
-      } catch (e) {
-        // Invalid date format, skip
-      }
+    // Only accept valid status values
+    if (intakeStatus !== 'open' && intakeStatus !== 'closed' && intakeStatus !== 'waitlist') {
+      intakeStatus = 'NOT_FOUND';
     }
     
     return {
@@ -420,17 +404,19 @@ ${htmlContent.substring(0, 30000)}
 Rules:
 1. Return ONLY the JSON object (no markdown, no code blocks)
 2. Dates must be in YYYY-MM-DD format
-3. If information not found, use "NOT_FOUND"
-4. Extract campus location from page (look for "campus", "location", address, city names)
-5. Extract intakes from text (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-6. Look for deadlines near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
-7. INTAKE STATUS LOGIC (CRITICAL):
-   - If there is a future deadline date (deadline is in the future), the intake is likely "open"
-   - If text says "closed", "not accepting", "full", "no longer accepting", use "closed"
-   - If text says "waitlist", "waiting list", use "waitlist"
-   - If text says "early applications encouraged", "apply early", "accepting applications", use "open"
-   - If there's a deadline date but no explicit "closed" message, assume "open" (deadlines indicate open applications)
-   - Only use "closed" if explicitly stated or if deadline has passed
+3. CRITICAL: If information is NOT explicitly found on the page, use "NOT_FOUND" - DO NOT assume, guess, or infer any values
+4. Extract campus location from page ONLY if explicitly mentioned (look for "campus", "location", address, city names)
+5. Extract intakes from text ONLY if explicitly stated (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
+6. Look for deadlines ONLY if explicitly mentioned near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
+7. INTAKE STATUS LOGIC (CRITICAL - DO NOT ASSUME):
+   - ONLY return "open", "closed", or "waitlist" if EXPLICITLY STATED on the page
+   - If text explicitly says "closed", "not accepting", "full", "no longer accepting", use "closed"
+   - If text explicitly says "waitlist", "waiting list", use "waitlist"
+   - If text explicitly says "open", "accepting applications", "now accepting", use "open"
+   - If intake status is NOT explicitly mentioned anywhere on the page, return "NOT_FOUND"
+   - DO NOT assume status based on deadline dates, future dates, or any other information
+   - DO NOT guess, infer, or make assumptions - only use what is clearly and explicitly stated
+   - If you are unsure, return "NOT_FOUND"
 8. Look for CAS (Confirmation of Acceptance for Studies) deadlines specifically (UK programs) - for international students
 9. Look for I-20 deadlines specifically (USA programs) - for international students
 10. Check tabs, dropdowns, location selectors, and hidden content for information
@@ -500,31 +486,13 @@ Rules:
 
     const extracted = JSON.parse(jsonMatch[0]);
     
-    // Post-process: If there's a future deadline and status is unclear, set to "open"
+    // DO NOT ASSUME - Only use what's explicitly found on the page
+    // If intake status is not found, return NOT_FOUND - do not assume "open"
     let intakeStatus = extracted.intakeStatus || 'NOT_FOUND';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
-    // Check if any deadline is in the future
-    const deadlines = [
-      extracted.admissionDeadline,
-      extracted.casDeadline,
-      extracted.i20Deadline
-    ].filter(d => d && d !== 'NOT_FOUND');
-    
-    for (const deadline of deadlines) {
-      try {
-        const deadlineDate = new Date(deadline);
-        if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
-          // Future deadline found - if status is NOT_FOUND or unclear, set to "open"
-          if (intakeStatus === 'NOT_FOUND' || intakeStatus === '') {
-            intakeStatus = 'open';
-          }
-          break;
-        }
-      } catch (e) {
-        // Invalid date format, skip
-      }
+    // Only accept valid status values
+    if (intakeStatus !== 'open' && intakeStatus !== 'closed' && intakeStatus !== 'waitlist') {
+      intakeStatus = 'NOT_FOUND';
     }
     
     return {

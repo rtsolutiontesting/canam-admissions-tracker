@@ -1012,7 +1012,7 @@ Rules:
                     admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
                     casDeadline: extracted.casDeadline || 'NOT_FOUND',
                     intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
-                    intakeStatus: extracted.intakeStatus || 'open',
+                    intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
                     remarks: extracted.remarks || '',
                     errorMessage: ''
                 };
@@ -1091,7 +1091,7 @@ Rules:
                     admissionDeadline: extracted.admissionDeadline || 'NOT_FOUND',
                     casDeadline: extracted.casDeadline || 'NOT_FOUND',
                     intakesAvailable: extracted.intakesAvailable || 'NOT_FOUND',
-                    intakeStatus: extracted.intakeStatus || 'open',
+                    intakeStatus: extracted.intakeStatus || 'NOT_FOUND',
                     remarks: extracted.remarks || '',
                     errorMessage: ''
                 };
@@ -2798,7 +2798,7 @@ Rules:
                 casDeadline: 'NOT_FOUND',
                 i20Deadline: 'NOT_FOUND',
                 intakesAvailable: 'NOT_FOUND',
-                intakeStatus: 'open',
+                intakeStatus: 'NOT_FOUND', // DO NOT ASSUME - only set if explicitly found
                 campusLocation: 'NOT_FOUND',
                 remarks: '',
                 errorMessage: ''
@@ -3102,90 +3102,23 @@ Rules:
                     }
                 }
                 
-                // INTAKE STATUS LOGIC - Focus on international students from India
-                // First, check for explicit status keywords
-                let statusDetermined = false;
+                // INTAKE STATUS LOGIC - DO NOT ASSUME, ONLY USE EXPLICIT STATUS
+                // Only set status if explicitly found on the page - otherwise leave as NOT_FOUND
                 
                 // Check for explicit "closed" indicators
                 if (/(?:closed|not\s+accepting|no\s+longer\s+accepting|applications\s+closed|full|programme\s+is\s+full)/gi.test(cleanContent)) {
                     result.intakeStatus = 'closed';
-                    statusDetermined = true;
                 } 
                 // Check for waitlist
                 else if (/(?:waitlist|waiting\s+list|wait\s+list)/gi.test(cleanContent)) {
                     result.intakeStatus = 'waitlist';
-                    statusDetermined = true;
                 }
                 // Check for explicit "open" indicators
                 else if (/(?:open|accepting|now\s+accepting|currently\s+accepting|early\s+applications\s+encouraged|apply\s+early)/gi.test(cleanContent)) {
                     result.intakeStatus = 'open';
-                    statusDetermined = true;
                 }
-                
-                // If status not explicitly determined, check for future deadlines
-                // A future deadline indicates the intake is likely open
-                if (!statusDetermined) {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    
-                    // Check admission deadline
-                    if (result.admissionDeadline && result.admissionDeadline !== 'NOT_FOUND') {
-                        try {
-                            // Try to parse the deadline date
-                            const deadlineStr = result.admissionDeadline;
-                            let deadlineDate = null;
-                            
-                            // Try different date formats
-                            if (deadlineStr.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/)) {
-                                // MM/DD/YYYY or DD/MM/YYYY
-                                const parts = deadlineStr.split(/[\/\-]/);
-                                if (parts[2].length === 2) parts[2] = '20' + parts[2];
-                                deadlineDate = new Date(parts[2], parts[0] - 1, parts[1]);
-                            } else if (deadlineStr.match(/^\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)[a-z]*\s+\d{2,4}$/i)) {
-                                deadlineDate = new Date(deadlineStr);
-                            }
-                            
-                            if (deadlineDate && !isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
-                                // Future deadline found - intake is open
-                                result.intakeStatus = 'open';
-                                statusDetermined = true;
-                            }
-                        } catch (e) {
-                            // Date parsing failed, continue
-                        }
-                    }
-                    
-                    // Check CAS deadline (UK programs)
-                    if (!statusDetermined && result.casDeadline && result.casDeadline !== 'NOT_FOUND') {
-                        try {
-                            const deadlineDate = new Date(result.casDeadline);
-                            if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
-                                result.intakeStatus = 'open';
-                                statusDetermined = true;
-                            }
-                        } catch (e) {
-                            // Date parsing failed, continue
-                        }
-                    }
-                    
-                    // Check I-20 deadline (USA programs)
-                    if (!statusDetermined && result.i20Deadline && result.i20Deadline !== 'NOT_FOUND') {
-                        try {
-                            const deadlineDate = new Date(result.i20Deadline);
-                            if (!isNaN(deadlineDate.getTime()) && deadlineDate >= today) {
-                                result.intakeStatus = 'open';
-                                statusDetermined = true;
-                            }
-                        } catch (e) {
-                            // Date parsing failed, continue
-                        }
-                    }
-                }
-                
-                // If still not determined, default to 'open' (optimistic approach)
-                if (!statusDetermined) {
-                    result.intakeStatus = 'open';
-                }
+                // If no explicit status found, leave as NOT_FOUND (do not assume)
+                // DO NOT infer status from deadlines or other information
                 
                 // Extract any important notes/alerts
                 const notePatterns = [
