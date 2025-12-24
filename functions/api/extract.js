@@ -278,7 +278,11 @@ Rules:
 3. CRITICAL: If information is NOT explicitly found on the page, use "NOT_FOUND" - DO NOT assume, guess, or infer any values
 4. Extract campus location from page ONLY if explicitly mentioned (look for "campus", "location", address, city names)
 5. Extract intakes from text ONLY if explicitly stated (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-6. Look for deadlines ONLY if explicitly mentioned near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
+6. Look for deadlines ONLY if explicitly mentioned near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students", "application deadline for international students requiring a visa"
+7. IMPORTANT: The date can appear BEFORE or AFTER the deadline text. Look for both formats:
+   - "3 July 2026 Application deadline for international students requiring a visa" (date first - HIGH PRIORITY)
+   - "Application deadline for international students requiring a visa: 3 July 2026" (date after)
+8. PRIORITIZE deadlines that mention "international students requiring a visa" - these are the most relevant for Indian students
 7. INTAKE STATUS LOGIC (CRITICAL - DO NOT ASSUME):
    - ONLY return "open", "closed", or "waitlist" if EXPLICITLY STATED on the page
    - If text explicitly says "closed", "not accepting", "full", "no longer accepting", use "closed"
@@ -407,7 +411,11 @@ Rules:
 3. CRITICAL: If information is NOT explicitly found on the page, use "NOT_FOUND" - DO NOT assume, guess, or infer any values
 4. Extract campus location from page ONLY if explicitly mentioned (look for "campus", "location", address, city names)
 5. Extract intakes from text ONLY if explicitly stated (e.g., "September 2024", "Fall 2024", "2024/25", "Jan 2025")
-6. Look for deadlines ONLY if explicitly mentioned near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students"
+6. Look for deadlines ONLY if explicitly mentioned near keywords like "deadline", "closing date", "application closes", "apply by", "application deadline for international students", "application deadline for international students requiring a visa"
+7. IMPORTANT: The date can appear BEFORE or AFTER the deadline text. Look for both formats:
+   - "3 July 2026 Application deadline for international students requiring a visa" (date first - HIGH PRIORITY)
+   - "Application deadline for international students requiring a visa: 3 July 2026" (date after)
+8. PRIORITIZE deadlines that mention "international students requiring a visa" - these are the most relevant for Indian students
 7. INTAKE STATUS LOGIC (CRITICAL - DO NOT ASSUME):
    - ONLY return "open", "closed", or "waitlist" if EXPLICITLY STATED on the page
    - If text explicitly says "closed", "not accepting", "full", "no longer accepting", use "closed"

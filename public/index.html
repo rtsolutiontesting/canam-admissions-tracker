@@ -3019,17 +3019,44 @@ Rules:
                 // First, look for deadlines specifically for international students or India
                 let deadlineFound = false;
                 const internationalDeadlinePatterns = [
-                    /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    // Priority 1: "3 July 2026 Application deadline for international students requiring a visa" (date BEFORE text)
+                    /(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})\s+application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa/gi,
+                    // Priority 2: "Application deadline for international students requiring a visa: 3 July 2026" (date AFTER text)
+                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
+                    // Priority 3: Other international student deadline patterns
                     /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi,
-                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
-                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/gi
+                    /(?:application\s+deadline\s+for\s+international\s+students|deadline\s+for\s+international|international\s+student\s+deadline|deadline\s+for\s+india|india\s+deadline)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+                    /(?:application\s+deadline\s+for\s+international\s+students\s+requiring\s+a\s+visa)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi
                 ];
                 
-                for (const pattern of internationalDeadlinePatterns) {
+                for (let i = 0; i < internationalDeadlinePatterns.length; i++) {
+                    const pattern = internationalDeadlinePatterns[i];
                     const matches = cleanContent.match(pattern);
                     if (matches && matches.length > 0) {
-                        let deadline = matches[0].replace(/(?:deadline|closing|application|admission|due\s+date|closes|for\s+international|for\s+india|requiring\s+a\s+visa)[\s:]*/gi, '').trim();
-                        if (deadline) {
+                        // Extract the date from the match
+                        let deadline = '';
+                        
+                        // For patterns with capturing groups (priority 1 and 2), use the captured group
+                        if (i === 0 || i === 1) {
+                            // These patterns have the date in a capturing group
+                            const execResult = pattern.exec(cleanContent);
+                            if (execResult && execResult[1]) {
+                                deadline = execResult[1].trim();
+                            }
+                            // Reset regex lastIndex
+                            pattern.lastIndex = 0;
+                        } else {
+                            // For other patterns, extract date from the match
+                            const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                            if (dateMatch && dateMatch[1]) {
+                                deadline = dateMatch[1].trim();
+                            } else {
+                                // Fallback: remove deadline text and keep the date
+                                deadline = matches[0].replace(/(?:deadline|closing|application|admission|due\s+date|closes|for\s+international|for\s+india|requiring\s+a\s+visa)[\s:]*/gi, '').trim();
+                            }
+                        }
+                        
+                        if (deadline && deadline.match(/\d/)) {
                             result.admissionDeadline = deadline;
                             deadlineFound = true;
                             break;
