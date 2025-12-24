@@ -2136,9 +2136,15 @@ Rules:
                                         
                                         const extracted = await apiResponse.json();
                                         
-                                        // Estimate tokens used (rough estimate: ~1000 tokens per request)
-                                        const estimatedTokens = 1000;
-                                        updateAIProgress(agentName, estimatedTokens, 0);
+                                        // Check if fallback was used
+                                        if (extracted.fallbackUsed) {
+                                            addStreamLine('warning', `[${processedCount}] ⚠️ OpenAI rate limit hit. Automatically switched to Gemini fallback.`);
+                                            updateAIProgress('Gemini 1.5 Flash (Fallback)', 1000, 0);
+                                        } else {
+                                            // Estimate tokens used (rough estimate: ~1000 tokens per request)
+                                            const estimatedTokens = 1000;
+                                            updateAIProgress(agentName, estimatedTokens, 0);
+                                        }
                                         
                                         // Handle multiple programs/campuses - create separate rows
                                         const programsToAdd = [];
