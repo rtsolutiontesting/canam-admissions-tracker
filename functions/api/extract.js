@@ -230,13 +230,15 @@ export async function onRequestPost(context) {
     });
 
   } catch (error) {
+    console.error('Extraction error:', error);
     return new Response(JSON.stringify({
       error: error.message,
       admissionDeadline: 'NOT_FOUND',
       casDeadline: 'NOT_FOUND',
       intakesAvailable: 'NOT_FOUND',
       intakeStatus: 'NOT_FOUND',
-      remarks: `Error: ${error.message}`
+      remarks: `Error: ${error.message}`,
+      stack: error.stack
     }), {
       status: 500,
       headers: {
