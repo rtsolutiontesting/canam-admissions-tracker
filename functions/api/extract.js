@@ -170,12 +170,14 @@ export async function onRequestPost(context) {
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Combine all extracted text
-    visibleText = (visibleText + ' ' + allText)
+    // Combine all extracted text - PRIORITY SECTIONS FIRST
+    // Put priority sections at the beginning so they're processed first
+    visibleText = (prioritySections + ' ' + visibleText + ' ' + allText)
       .replace(/\s+/g, ' ')
       .trim();
     
     // Limit to 100KB for AI (increased to capture maximum content for comprehensive extraction)
+    // But prioritize: if priority sections exist, ensure they're included
     const cleanHtml = visibleText.substring(0, 100000);
 
     // Step 3: Extract data using AI with automatic fallback
@@ -568,13 +570,59 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
   };
   
   try {
-    // Clean content
-    const cleanContent = htmlContent
+    // STEP 1: PRIORITIZE - Extract deadline-related sections FIRST
+    // Look for sections containing deadline keywords (these are most likely to have the deadline)
+    const deadlineKeywords = ['deadline', 'application', 'international', 'visa', 'requiring', 'students', 'india', 'apply', 'closing', 'due date'];
+    let priorityContent = '';
+    let remainingContent = htmlContent;
+    
+    // Extract sections with deadline-related keywords (HIGH PRIORITY)
+    const priorityPatterns = [
+      // Sections with class/id containing deadline keywords
+      /<div[^>]*(?:class|id)=["'][^"']*(?:deadline|application|international|visa|admission|apply|closing)[^"']*["'][^>]*>([\s\S]{50,2000})<\/div>/gi,
+      // Paragraphs with deadline keywords
+      /<p[^>]*>([^<]{0,500}(?:deadline|application\s+deadline|international\s+students|requiring\s+visa)[^<]{0,500})<\/p>/gi,
+      // List items with deadline keywords
+      /<li[^>]*>([^<]{0,500}(?:deadline|application\s+deadline|international\s+students|requiring\s+visa)[^<]{0,500})<\/li>/gi,
+      // Headings followed by deadline content
+      /<h[1-6][^>]*>(?:deadline|application|international)[^<]*<\/h[1-6]>[\s\S]{0,500}([\s\S]{50,1000})/gi,
+      // Strong/bold text with deadlines (often highlighted)
+      /<(?:strong|b|em|mark)[^>]*>([^<]{0,300}(?:deadline|application\s+deadline|international\s+students|requiring\s+visa)[^<]{0,300})<\/(?:strong|b|em|mark)>/gi,
+      // Sections mentioning "India" or "international students"
+      /<div[^>]*(?:class|id)=["'][^"']*(?:india|international|overseas|country)[^"']*["'][^>]*>([\s\S]{50,2000})<\/div>/gi,
+    ];
+    
+    for (const pattern of priorityPatterns) {
+      const matches = htmlContent.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          // Extract text from the match
+          const text = match.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (text.length > 20) {
+            priorityContent += ' PRIORITY: ' + text + ' ';
+          }
+        });
+      }
+    }
+    
+    // STEP 2: Clean and combine - Priority content FIRST, then rest
+    const cleanPriority = priorityContent
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .toLowerCase();
+    
+    // Clean remaining content
+    const cleanRemaining = htmlContent
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+    
+    // Combine: Priority content FIRST (so patterns match it first)
+    const cleanContent = cleanPriority + ' ' + cleanRemaining;
     
     // Priority patterns for international student deadlines
     const internationalDeadlinePatterns = [
@@ -592,13 +640,15 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
       const matches = cleanContent.match(pattern);
       if (matches && matches.length > 0) {
         let deadline = '';
-        if (i <= 1) {
+        // Patterns 0-3 have capturing groups
+        if (i <= 3) {
           const execResult = pattern.exec(cleanContent);
           if (execResult && execResult[1]) {
             deadline = execResult[1].trim();
           }
-          pattern.lastIndex = 0;
+          pattern.lastIndex = 0; // Reset regex
         } else {
+          // For other patterns, extract date from match
           const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
           if (dateMatch && dateMatch[1]) {
             deadline = dateMatch[1].trim();
@@ -608,7 +658,39 @@ function extractWithPatternMatchingServer(htmlContent, programName, universityNa
         if (deadline && deadline.match(/\d/)) {
           result.admissionDeadline = deadline;
           deadlineFound = true;
+          console.log(`[Server Pattern Match ${i}] ✅ Found deadline: "${deadline}"`);
           break;
+        }
+      }
+    }
+    
+    // If still not found, try searching in priority sections only (more focused)
+    if (!deadlineFound && cleanPriority) {
+      console.log('[Server Pattern Match] Trying priority sections only...');
+      for (let i = 0; i < internationalDeadlinePatterns.length; i++) {
+        const pattern = internationalDeadlinePatterns[i];
+        const matches = cleanPriority.match(pattern);
+        if (matches && matches.length > 0) {
+          let deadline = '';
+          if (i <= 3) {
+            const execResult = pattern.exec(cleanPriority);
+            if (execResult && execResult[1]) {
+              deadline = execResult[1].trim();
+            }
+            pattern.lastIndex = 0;
+          } else {
+            const dateMatch = matches[0].match(/(\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{2,4})/i);
+            if (dateMatch && dateMatch[1]) {
+              deadline = dateMatch[1].trim();
+            }
+          }
+          
+          if (deadline && deadline.match(/\d/)) {
+            result.admissionDeadline = deadline;
+            deadlineFound = true;
+            console.log(`[Server Pattern Match ${i} - Priority Only] ✅ Found deadline: "${deadline}"`);
+            break;
+          }
         }
       }
     }
