@@ -2267,6 +2267,7 @@ Rules:
                                         }
                                         // Single program/campus
                                         else {
+                                            program.admissionDeadline = extracted.admissionDeadline || 'NOT_FOUND';
                                             program.admissionDeadline_found = extracted.admissionDeadline || 'NOT_FOUND';
                                             program.casSubmissionDeadline_found = extracted.casDeadline || 'NOT_FOUND';
                                             program.i20Deadline_found = extracted.i20Deadline || 'NOT_FOUND';
@@ -2495,6 +2496,7 @@ Rules:
                                 
                             } catch (error) {
                                 program.errorMessage = `Failed to extract: ${error.message}`;
+                                program.admissionDeadline = 'NOT_FOUND';
                                 program.admissionDeadline_found = 'NOT_FOUND';
                                 program.casSubmissionDeadline_found = 'NOT_FOUND';
                                 program.checkedDate = new Date().toISOString().split('T')[0];
@@ -2503,6 +2505,7 @@ Rules:
                                 addStreamLine('error', `❌ [${processedCount}] Extraction failed: ${program.universityName || program.university} - ${error.message}`);
                             }
                         } else {
+                            program.admissionDeadline = 'NOT_FOUND';
                             program.admissionDeadline_found = 'NOT_FOUND';
                             program.casSubmissionDeadline_found = 'NOT_FOUND';
                             program.errorMessage = 'No valid URL provided';
